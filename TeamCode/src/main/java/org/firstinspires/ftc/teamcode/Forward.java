@@ -73,10 +73,16 @@ public class Forward extends LinearOpMode {
             strafeMotor = hardwareMap.dcMotor.get("Strafe_Motor");
             liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
             //armMotor = hardwareMap.dcMotor.get("Arm_Motor");
-            //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            liftMotor.setDirection(DcMotor.Direction.REVERSE);
+            //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER)
 
-        // Initialize the hardware variables. Note that the strings used here as parameters
+            //resetting / reversing lift motor
+            liftMotor.setDirection(DcMotor.Direction.REVERSE);
+            liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+
+
+            // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
         //leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
@@ -84,8 +90,8 @@ public class Forward extends LinearOpMode {
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        //leftDrive.setDirection(DcMotor.Direction.FORWARD);
-        //rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftMotor.setDirection(DcMotor.Direction.FORWARD);
+        rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
@@ -121,16 +127,10 @@ public class Forward extends LinearOpMode {
             leftMotor.setPower(leftPower);
             rightMotor.setPower(rightPower);
             strafeMotor.setPower(strafePower);
-            //power for lift
-            if(gamepad1.dpad_up) {
-                liftMotor.setTargetPosition(974);
-                liftMotor.setPower(1);
-            } else if(gamepad1.dpad_down) {
-                liftMotor.setTargetPosition(-974);
-                liftMotor.setPower(-1);
-            }
-
             tickCount = liftMotor.getCurrentPosition();
+            //power for lift
+            liftMotor.setTargetPosition(800);
+            liftMotor.setPower(0.5);
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f)", leftPower, rightPower, strafePower);
