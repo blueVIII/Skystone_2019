@@ -35,6 +35,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 
 /**
@@ -73,11 +74,10 @@ public class Forward extends LinearOpMode {
             strafeMotor = hardwareMap.dcMotor.get("Strafe_Motor");
             liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
             //armMotor = hardwareMap.dcMotor.get("Arm_Motor");
-            //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER)
 
             //resetting / reversing lift motor
             liftMotor.setDirection(DcMotor.Direction.REVERSE);
-            liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
 
             // Initialize the hardware variables. Note that the strings used here as parameters
@@ -97,7 +97,6 @@ public class Forward extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-
             // Setup a variable for each drive wheel to save power level for telemetry
             double leftPower;
             double rightPower;
@@ -120,26 +119,18 @@ public class Forward extends LinearOpMode {
             leftPower  = (gamepad1.left_stick_y);
             rightPower = (gamepad1.right_stick_y);
             strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
+            liftPower = (gamepad2.left_stick_y) / -1.5;
             //armPower = 1.0;
             // Send calculated power to wheels
             leftMotor.setPower(leftPower);
             rightMotor.setPower(rightPower);
             strafeMotor.setPower(strafePower);
+            liftMotor.setPower(liftPower);
             tickCount = liftMotor.getCurrentPosition();
             //power for lift
-            while(gamepad1.y) {
-                while (liftMotor.getCurrentPosition() < 900) {
-                    liftMotor.setPower(.75);
-                }
-            }
-            while(gamepad1.a) {
-                while (liftMotor.getCurrentPosition() > -50) {
-                    liftMotor.setPower(-.75);
-                }
-            }
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
-            telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f)", leftPower, rightPower, strafePower);
+            telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f), lift (%.2f)",  leftPower, rightPower, strafePower, liftPower);
             telemetry.addData("Tick Count", tickCount);
             telemetry.update();
         }
