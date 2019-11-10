@@ -29,13 +29,10 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
-import com.qualcomm.robotcore.hardware.Gamepad;
 
 
 /**
@@ -53,34 +50,40 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 
 @TeleOp(name="Slide Drive", group="Linear Opmode")
 //@Disabled
-public class Forward extends LinearOpMode {
-
-    // Declare OpMode members.
-    private ElapsedTime runtime = new ElapsedTime();
+public class Forward extends OpMode {
     //private DcMotor leftDrive = null;
     //private DcMotor rightDrive = null;
-        DcMotor leftMotor;
-        DcMotor rightMotor;
-        DcMotor strafeMotor;
-        DcMotor liftMotor;
-        int tickCount;
-        //DcMotor armMotor;
-        @Override
-        public void runOpMode() {
-            telemetry.addData("Status", "Initialized");
-            telemetry.update();
-            leftMotor = hardwareMap.dcMotor.get("Left_Motor");
-            rightMotor = hardwareMap.dcMotor.get("Right_Motor");
-            strafeMotor = hardwareMap.dcMotor.get("Strafe_Motor");
-            liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
-            //armMotor = hardwareMap.dcMotor.get("Arm_Motor");
 
-            //resetting / reversing lift motor
-            liftMotor.setDirection(DcMotor.Direction.REVERSE);
-            //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    private DcMotor leftMotor = null;
+    private DcMotor rightMotor = null;
+    private DcMotor strafeMotor = null;
+    private DcMotor liftMotor = null;
+    private int tickCount;
+    private double leftPower;
+    private double rightPower;
+    private double strafePower;
+    private double liftPower;
+    //DcMotor armMotor;
 
+    public Forward() {
 
-            // Initialize the hardware variables. Note that the strings used here as parameters
+    }
+
+    // Declare OpMode members.
+    @Override
+    public void init() {
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
+        leftMotor = hardwareMap.dcMotor.get("Left_Motor");
+        rightMotor = hardwareMap.dcMotor.get("Right_Motor");
+        strafeMotor = hardwareMap.dcMotor.get("Strafe_Motor");
+        liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
+        //armMotor = hardwareMap.dcMotor.get("Arm_Motor");
+
+        //resetting / reversing lift motor
+        liftMotor.setDirection(DcMotor.Direction.REVERSE);
+        //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
         //leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
@@ -90,49 +93,70 @@ public class Forward extends LinearOpMode {
         // Reverse the motor that runs backwards when connected directly to the battery
         leftMotor.setDirection(DcMotor.Direction.FORWARD);
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
+        // Setup a variable for each drive wheel to save power level for telemetry
 
-        // Wait for the game to start (driver presses PLAY)
-        waitForStart();
-        runtime.reset();
+    }
+    /*
+     * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
+     */
+    @Override
+    public void init_loop() {
 
-        // run until the end of the match (driver presses STOP)
-        while (opModeIsActive()) {
-            // Setup a variable for each drive wheel to save power level for telemetry
-            double leftPower;
-            double rightPower;
-            double strafePower;
-            double liftPower;
-           //double armPower;
+    }
+    /*
+     * Code to run ONCE when the driver hits PLAY
+     */
+/*    @Override
+    public void start()
+    {
+        //runtime.reset();
+    }*/
 
-            // Choose to drive using either Tank Mode, or POV Mode
-            // Comment out the method that's not used.  The default below is POV.
+    /*
+     * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
+     */
+    @Override
+    public void loop() {
+        // Choose to drive using either Tank Mode, or POV Mode
+        // Comment out the method that's not used.  The default below is POV.
 
-            // POV Mode uses left stick to go forward, and right stick to turn.
-            // - This uses basic math to combine motions and is easier to drive straight.
-            //double drive = -gamepad1.left_stick_y;
-            //double turn  =  gamepad1.right_stick_x;
-            //le ftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
-            //rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
+        // POV Mode uses left stick to go forward, and right stick to turn.
+        // - This uses basic math to combine motions and is easier to drive straight.
+        //double drive = -gamepad1.left_stick_y;
+        //double turn  =  gamepad1.right_stick_x;
+        //le ftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
+        //rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
 
-            // Tank Mode uses one stick to control each wheel.
-            // - This requires no math, but it is hard to drive forward slowly and keep straight.
-            leftPower  = (gamepad1.left_stick_y);
-            rightPower = (gamepad1.right_stick_y);
-            strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
-            liftPower = (gamepad2.left_stick_y) / -1.5;
-            //armPower = 1.0;
-            // Send calculated power to wheels
-            leftMotor.setPower(leftPower);
-            rightMotor.setPower(rightPower);
-            strafeMotor.setPower(strafePower);
-            liftMotor.setPower(liftPower);
-            tickCount = liftMotor.getCurrentPosition();
-            //power for lift
-            // Show the elapsed game time and wheel power.
-            telemetry.addData("Status", "Run Time: " + runtime.toString());
-            telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f), lift (%.2f)",  leftPower, rightPower, strafePower, liftPower);
-            telemetry.addData("Tick Count", tickCount);
-            telemetry.update();
-        }
+        // Tank Mode uses one stick to control each wheel.
+        // - This requires no math, but it is hard to drive forward slowly and keep straight.
+        leftPower  = (gamepad1.left_stick_y);
+        rightPower = (gamepad1.right_stick_y);
+        strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
+        liftPower = (gamepad2.left_stick_y) / -1.5;
+        //armPower = 1.0;
+        // Send calculated power to wheels
+        leftMotor.setPower(leftPower);
+        rightMotor.setPower(rightPower);
+        strafeMotor.setPower(strafePower);
+        liftMotor.setPower(liftPower);
+        tickCount = liftMotor.getCurrentPosition();
+        //power for lift
+        // Show the elapsed game time and wheel power.
+        //telemetry.addData("Status", "Run Time: " + runtime.toString());
+        telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f), lift (%.2f)",  leftPower, rightPower, strafePower, liftPower);
+        telemetry.addData("Tick Count", tickCount);
+        telemetry.update();
+    }
+
+    /*
+     * Code to run ONCE after the driver hits STOP
+     */
+    @Override
+    public void stop() {
+        leftMotor.setPower(0.0);
+        rightMotor.setPower(0.0);
+        strafeMotor.setPower(0.0);
+        liftMotor.setPower(0.0);
+
     }
 }
