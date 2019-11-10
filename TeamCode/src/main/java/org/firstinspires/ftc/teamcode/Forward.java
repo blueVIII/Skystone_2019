@@ -127,15 +127,15 @@ public class Forward extends LinearOpMode {
             strafeMotor.setPower(strafePower);
             tickCount = liftMotor.getCurrentPosition();
             //power for lift
-            while(liftMotor.getCurrentPosition() < 900) {
-                if (gamepad1.y) {
+            while(gamepad1.y) {
+                while (liftMotor.getCurrentPosition() < 900) {
                     liftMotor.setPower(.75);
                 }
             }
-            if(gamepad1.a) {
-                liftMotor.setTargetPosition(-75);
-                liftMotor.setPower(-1);
-                liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            while(gamepad1.a) {
+                while (liftMotor.getCurrentPosition() > -50) {
+                    liftMotor.setPower(-.75);
+                }
             }
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
