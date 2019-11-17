@@ -157,6 +157,5 @@ public class Forward extends OpMode {
         rightMotor.setPower(0.0);
         strafeMotor.setPower(0.0);
         liftMotor.setPower(0.0);
-
     }
 }
