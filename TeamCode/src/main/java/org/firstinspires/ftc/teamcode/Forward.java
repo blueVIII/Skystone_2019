@@ -33,6 +33,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 
 
 /**
@@ -54,16 +55,20 @@ public class Forward extends OpMode {
     //private DcMotor leftDrive = null;
     //private DcMotor rightDrive = null;
 
+    //DEFINE MOTORS AND SERVOS
     private DcMotor leftMotor = null;
     private DcMotor rightMotor = null;
     private DcMotor strafeMotor = null;
     private DcMotor liftMotor = null;
+    private Servo armServo = null;
+    private Servo clawServo = null;
+
+    //DEFINE POWER FOR THE MOTORS
     private int tickCount;
     private double leftPower;
     private double rightPower;
     private double strafePower;
     private double liftPower;
-    //DcMotor armMotor;
 
     public Forward() {
 
@@ -78,7 +83,8 @@ public class Forward extends OpMode {
         rightMotor = hardwareMap.dcMotor.get("Right_Motor");
         strafeMotor = hardwareMap.dcMotor.get("Strafe_Motor");
         liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
-        //armMotor = hardwareMap.dcMotor.get("Arm_Motor");
+        armServo = hardwareMap.servo.get("Arm_Servo");
+        clawServo = hardwareMap.servo.get("Claw_Servo");
 
         //resetting / reversing lift motor
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -124,27 +130,52 @@ public class Forward extends OpMode {
         // - This uses basic math to combine motions and is easier to drive straight.
         //double drive = -gamepad1.left_stick_y;
         //double turn  =  gamepad1.right_stick_x;
-        //le ftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
+        //leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
         //rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
 
         // Tank Mode uses one stick to control each wheel.
         // - This requires no math, but it is hard to drive forward slowly and keep straight.
-        leftPower  = (gamepad1.left_stick_y);
-        rightPower = (gamepad1.right_stick_y);
+
+        //controls for motors and servos (includes button to slow down the speed)
+        if(gamepad1.left_bumper) {
+            leftPower  = (gamepad1.left_stick_y) / 1.5;
+            rightPower = (gamepad1.right_stick_y) / 1.5;
+        } else {
+            leftPower  = (gamepad1.left_stick_y);
+            rightPower = (gamepad1.right_stick_y);
+        }
         strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
         liftPower = (gamepad2.left_stick_y) / -1.5;
-        //armPower = 1.0;
+
         // Send calculated power to wheels
         leftMotor.setPower(leftPower);
         rightMotor.setPower(rightPower);
         strafeMotor.setPower(strafePower);
         liftMotor.setPower(liftPower);
+
+        if(gamepad2.left_bumper) {
+            clawServo.setPosition(0);
+        } else if (gamepad2.right_bumper) {
+            clawServo.setPosition(1);
+        }
+
+        //gets current position of servo, if button pressed add .003 to the current position
+        double i = armServo.getPosition();
+        if(gamepad2.y) {
+            i = i+.003;
+            armServo.setPosition(i);
+        } else if (gamepad2.a) {
+            i = i-.003;
+            armServo.setPosition(i);
+        }
+
         tickCount = liftMotor.getCurrentPosition();
         //power for lift
         // Show the elapsed game time and wheel power.
         //telemetry.addData("Status", "Run Time: " + runtime.toString());
-        telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f), lift (%.2f)",  leftPower, rightPower, strafePower, liftPower);
+        telemetry.addData("Motors", "left (%.2f), right (%.2f), strafe(%.2f), lift (%.2f)", leftPower, rightPower, strafePower, liftPower);
         telemetry.addData("Tick Count", tickCount);
+        telemetry.addData("Servo Position", i);
         telemetry.update();
     }
 
