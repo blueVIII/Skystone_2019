@@ -69,10 +69,8 @@ public class Forward extends OpMode {
     private double rightPower;
     private double strafePower;
     private double liftPower;
+    boolean clawIsOpen = true;
 
-    public Forward() {
-
-    }
 
     // Declare OpMode members.
     @Override
@@ -85,7 +83,7 @@ public class Forward extends OpMode {
         liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
         armServo = hardwareMap.servo.get("Arm_Servo");
         clawServo = hardwareMap.servo.get("Claw_Servo");
-
+        clawServo.setPosition(1); //Robot moves to reset position on Initialization.
         //resetting / reversing lift motor
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
         //liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -100,7 +98,6 @@ public class Forward extends OpMode {
         leftMotor.setDirection(DcMotor.Direction.FORWARD);
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
         // Setup a variable for each drive wheel to save power level for telemetry
-
     }
     /*
      * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
@@ -153,11 +150,21 @@ public class Forward extends OpMode {
         strafeMotor.setPower(strafePower);
         liftMotor.setPower(liftPower);
 
-        if(gamepad2.left_bumper) {
+        //if(gamepad2.left_bumper) {
+        //    clawServo.setPosition(0);
+        //} else if (gamepad2.right_bumper) {
+        //    clawServo.setPosition(1);
+        //}
+        //Improved Claw Code
+        boolean clawTriggered = gamepad2.right_bumper;
+        if (clawTriggered && clawIsOpen){
             clawServo.setPosition(0);
-        } else if (gamepad2.right_bumper) {
+            clawIsOpen = false;
+        } else if (clawTriggered && !clawIsOpen) {
             clawServo.setPosition(1);
+            clawIsOpen = true;
         }
+
 
         //gets current position of servo, if button pressed add .003 to the current position
         double i = armServo.getPosition();
