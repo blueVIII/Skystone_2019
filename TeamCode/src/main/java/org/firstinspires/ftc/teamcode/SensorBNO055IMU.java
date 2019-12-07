@@ -12,7 +12,10 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
@@ -21,31 +24,46 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 
-@Autonomous(name="Drive Avoid Imu", group="Exercises")
+@Autonomous(name="Autonomous Program", group="Exercises")
 //@Disabled
 public class SensorBNO055IMU extends LinearOpMode
 {
+    private ElapsedTime runtime = new ElapsedTime();
     DcMotor leftMotor, rightMotor;
-    //TouchSensor             touch;
+    Servo foundationServo1, foundationServo2;
+
     BNO055IMU               imu;
     Orientation             lastAngles = new Orientation();
-    double                  globalAngle, power = .30, correction;
+    double                  globalAngle, power = .3, correction;
     boolean                 aButton, bButton, touched;
+    static final double     COUNTS_PER_MOTOR_REV    = 2240;    // eg: TETRIX Motor Encoder
+    static final double     DRIVE_GEAR_REDUCTION    = 0.5 ;     // This is < 1.0 if geared UP
+    static final double     WHEEL_DIAMETER_INCHES   = 3.54331 ;     // For figuring circumference
+    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
+    static final double     DRIVE_SPEED             = 0.6;
 
     // called when init button is  pressed.
     @Override
-    public void runOpMode() throws InterruptedException
-    {
+    public void runOpMode() throws InterruptedException {
+        //INITIATE MOTORS AND SERVOS
         leftMotor = hardwareMap.dcMotor.get("Left_Motor");
         rightMotor = hardwareMap.dcMotor.get("Right_Motor");
+
+        foundationServo1 = hardwareMap.servo.get("Foundation_Servo1");
+        foundationServo2 = hardwareMap.servo.get("Foundation_Servo2");
 
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
 
         leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // get a reference to touch sensor.
-       // touch = hardwareMap.touchSensor.get("touch_sensor");
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        //reverse the motors so the robot drives straight
+
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
 
@@ -70,7 +88,6 @@ public class SensorBNO055IMU extends LinearOpMode
             sleep(50);
             idle();
         }
-
         telemetry.addData("Mode", "waiting for start");
         telemetry.addData("imu calib status", imu.getCalibrationStatus().toString());
         telemetry.update();
@@ -82,54 +99,113 @@ public class SensorBNO055IMU extends LinearOpMode
         telemetry.addData("Mode", "running");
         telemetry.update();
 
-        sleep(1000);
+        sleep(300);
 
-        // drive until end of period.
+        park();
+        //START MOVING
+        /*leftMotor.setDirection(DcMotor.Direction.FORWARD);
+        rightMotor.setDirection(DcMotor.Direction.REVERSE);
+        foundationMovement();
 
-        while (opModeIsActive())
-        {
-            // Use gyro to drive in a straight line.
-            correction = checkDirection();
+        foundationServo1.setPosition(1);
+        foundationServo2.setPosition(1);
 
-            telemetry.addData("1 imu heading", lastAngles.firstAngle);
-            telemetry.addData("2 global heading", globalAngle);
-            telemetry.addData("3 correction", correction);
-            telemetry.update();
+        leftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        foundationMoveBack();
+         */
+    }
 
-            leftMotor.setPower(power - correction);
-            rightMotor.setPower(power + correction);
+    //method used to move the robot to the desired position
+    public void park() {
+        int leftInches = 36;
+        int rightInches = 36;
+        int newLeftTarget = leftMotor.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
+        int newRightTarget = rightMotor.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
 
-            // We record the sensor values because we will test them in more than
-            // one place with time passing between those places. See the lesson on
-            // Timing Considerations to know why.
+        while(opModeIsActive()) {
+        correction = checkDirection();
 
-            aButton = gamepad1.a;
-            bButton = gamepad1.b;
-            //touched = touch.isPressed();
+        leftMotor.setTargetPosition(newLeftTarget);
+        rightMotor.setTargetPosition(newRightTarget);
 
-            if (touched || aButton || bButton)
-            {
-                // backup.
-                leftMotor.setPower(power);
-                rightMotor.setPower(power);
+        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        telemetry.addData("1 imu heading", lastAngles.firstAngle);
+        telemetry.addData("2 global heading", globalAngle);
+        telemetry.addData("3 correction", correction);
+        telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
+        telemetry.update();
 
-                sleep(500);
+        leftMotor.setPower(power - correction);
+        rightMotor.setPower(power + correction);
+        }
+    }
+    public void foundationMovement() {
+        //DEFINE MOVEMENT VALUES:
+        boolean isActive = true;
 
-                // stop.
-                leftMotor.setPower(0);
-                rightMotor.setPower(0);
+        int leftInches = 40;
+        int rightInches = 40;
+        int newLeftTarget = leftMotor.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
+        int newRightTarget = rightMotor.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
 
-                // turn 90 degrees right.
-                if (touched || aButton) rotate(-90, power);
+        //MOVE TO FOUNDATION:
+        leftMotor.setTargetPosition(newLeftTarget);
+        rightMotor.setTargetPosition(newRightTarget);
 
-                // turn 90 degrees left.
-                if (bButton) rotate(90, power);
+        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        while(isActive) {
+            if(leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget) {
+                // Use gyro to drive in a straight line.
+                correction = checkDirection();
+
+                telemetry.addData("1 imu heading", lastAngles.firstAngle);
+                telemetry.addData("2 global heading", globalAngle);
+                telemetry.addData("3 correction", correction);
+                telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
+                telemetry.update();
+
+                leftMotor.setPower(power - correction);
+                rightMotor.setPower(power + correction);
+            } else {
+                isActive = false;
             }
         }
 
-        // turn the motors off.
-        rightMotor.setPower(0);
-        leftMotor.setPower(0);
+
+    }
+    public void foundationMoveBack() {
+        boolean isActive = true;
+
+        leftMotor.setTargetPosition(0);
+        rightMotor.setTargetPosition(0);
+
+        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        while(isActive) {
+            if(leftMotor.getCurrentPosition() > 0 && rightMotor.getCurrentPosition() > 0){
+
+
+                // Use gyro to drive in a straight line.
+                correction = checkDirection();
+
+                telemetry.addData("1 imu heading", lastAngles.firstAngle);
+                telemetry.addData("2 global heading", globalAngle);
+                telemetry.addData("3 correction", correction);
+                telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
+                telemetry.update();
+
+                leftMotor.setPower((power - correction));
+                rightMotor.setPower((power - correction));
+            }
+            else {
+                isActive = false;
+            }
+        }
     }
 
     /**

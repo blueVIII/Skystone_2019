@@ -62,6 +62,7 @@ public class Forward extends OpMode {
     private DcMotor liftMotor = null;
     private Servo armServo = null;
     private Servo clawServo = null;
+    private Servo foundationServo1, foundationServo2;
 
     //DEFINE POWER FOR THE MOTORS
     private int tickCount;
@@ -70,6 +71,7 @@ public class Forward extends OpMode {
     private double strafePower;
     private double liftPower;
     boolean clawIsOpen = true;
+    boolean foundationServoOpen = true;
 
 
     // Declare OpMode members.
@@ -83,6 +85,9 @@ public class Forward extends OpMode {
         liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
         armServo = hardwareMap.servo.get("Arm_Servo");
         clawServo = hardwareMap.servo.get("Claw_Servo");
+        foundationServo1 = hardwareMap.servo.get("Foundation_Servo1");
+        foundationServo2 = hardwareMap.servo.get("Foundation_Servo2");
+
         clawServo.setPosition(1); //Robot moves to reset position on Initialization.
         //resetting / reversing lift motor
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -135,8 +140,8 @@ public class Forward extends OpMode {
 
         //controls for motors and servos (includes button to slow down the speed)
         if(gamepad1.left_bumper) {
-            leftPower  = (gamepad1.left_stick_y) / 1.5;
-            rightPower = (gamepad1.right_stick_y) / 1.5;
+            leftPower  = (gamepad1.left_stick_y) / 1.75;
+            rightPower = (gamepad1.right_stick_y) / 1.75;
         } else {
             leftPower  = (gamepad1.left_stick_y);
             rightPower = (gamepad1.right_stick_y);
@@ -156,22 +161,27 @@ public class Forward extends OpMode {
         //    clawServo.setPosition(1);
         //}
         //Improved Claw Code
-        boolean clawTriggered = gamepad2.right_bumper;
-        if (clawTriggered && clawIsOpen){
-            clawServo.setPosition(0);
-            clawIsOpen = false;
-        } else if (clawTriggered && !clawIsOpen) {
+        if(gamepad2.x || gamepad1.dpad_left) {
             clawServo.setPosition(1);
-            clawIsOpen = true;
+        } else if(gamepad2.b || gamepad1.dpad_right) {
+            clawServo.setPosition(0);
+        }
+
+        if(gamepad1.x) {
+            foundationServo1.setPosition(1);
+            foundationServo2.setPosition(0);
+        } else if (gamepad1.b) {
+            foundationServo1.setPosition(0);
+            foundationServo2.setPosition(1);
         }
 
 
         //gets current position of servo, if button pressed add .003 to the current position
         double i = armServo.getPosition();
-        if(gamepad2.y) {
+        if(gamepad2.y || gamepad1.dpad_up) {
             i = i+.003;
             armServo.setPosition(i);
-        } else if (gamepad2.a) {
+        } else if (gamepad2.a || gamepad1.dpad_down) {
             i = i-.003;
             armServo.setPosition(i);
         }
