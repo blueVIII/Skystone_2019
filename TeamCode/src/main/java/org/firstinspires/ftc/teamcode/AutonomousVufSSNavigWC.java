@@ -30,8 +30,8 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -39,6 +39,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
@@ -47,6 +50,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
 import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
@@ -84,9 +88,9 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
  * is explained below.
  */
 
-@TeleOp(name="SKYSTONE Vuforia Nav Webcam", group ="Linear Opmode")
+@Autonomous(name="SKYSTONE Vuforia Nav Webcam", group ="Linear Opmode")
 //@Disabled
-public class AutonomousVufSSNavigWC extends LinearOpMode {
+public class AutonomousVufSSNavigWC extends LinearOpMode  {
 
     // IMPORTANT: If you are using a USB WebCam, you must select CAMERA_CHOICE = BACK; and PHONE_IS_PORTRAIT = false;
     private static final VuforiaLocalizer.CameraDirection CAMERA_CHOICE = BACK;
@@ -115,7 +119,8 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
     // We will define some constants and conversions here
     private static final float mmPerInch        = 25.4f;
     private static final float mmTargetHeight   = (6) * mmPerInch;          // the height of the center of the target image above the floor
-
+    Orientation             lastAngles = new Orientation();
+    double                  globalAngle, power = .3, correction;
     // Constant for Stone Target
     private static final float stoneZ = 2.00f * mmPerInch;
 
@@ -130,8 +135,8 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     String xyz = "z";
     //CONTAINS ALL METHODS AND VARIABlES TO BE EXTENDED BY OTHER AUTON CLASSES
-    static final double     COUNTS_PER_MOTOR_REV    = 2240;    // eg: TETRIX Motor Encoder
-    static final double     DRIVE_GEAR_REDUCTION    = 2.0 ;     // This is < 1.0 if geared UP
+    static final double     COUNTS_PER_MOTOR_REV    = 1120;    // eg: TETRIX Motor Encoder
+    static final double     DRIVE_GEAR_REDUCTION    = 4.0 ;     // This is < 1.0 if geared UP
     static final double     WHEEL_DIAMETER_INCHES   = 3.54331 ;     // For figuring circumference
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * Math.PI);
     static final double     DRIVE_SPEED             = 0.6;
@@ -143,7 +148,9 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
     private DcMotor liftMotor = null;
     private Servo foundationServo1 = null;
     private Servo foundationServo2 = null;
+
     BNO055IMU imu;
+    String positionOfRobot = "";
 
 
     // Constants for perimeter targets
@@ -153,10 +160,8 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
     // Class Members
     private OpenGLMatrix lastLocation = null;
     private VuforiaLocalizer vuforia = null;
-    /*public interface VuforiaLocalizer extends CameraStreamSource {
+    //public interface VuforiaLocalizer extends CameraStreamSource {
 
-    }
-    */
     /**
      * This is the webcam we are to use. As with other hardware devices such as motors and
      * servos, this device is identified using the robot configuration tool in the FTC application.
@@ -248,7 +253,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
         rear2.setName("Rear Perimeter 2");
 
         // For convenience, gather together all the trackable objects in one easily-iterable collection */
-        List<VuforiaTrackable> allTrackables = new ArrayList<VuforiaTrackable>();
+        List<VuforiaTrackable> allTrackables = new ArrayList<>();
         allTrackables.addAll(targetsSkyStone);
 
         /**
@@ -341,16 +346,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
         // The two examples below assume that the camera is facing forward out the front of the robot.
 
         // We need to rotate the camera around it's long axis to bring the correct camera forward.
-        if (CAMERA_CHOICE == BACK) {
-            phoneYRotate = -90;
-        } else {
-            phoneYRotate = 90;
-        }
 
-        // Rotate the phone vertical about the X axis if it's in portrait mode
-        if (PHONE_IS_PORTRAIT) {
-            phoneXRotate = 90 ;
-        }
 
         // Next, translate the camera lens to where it is on the robot.
         // In this example, it is centered (left to right), but forward of the middle of the robot, and above ground level.
@@ -381,7 +377,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
 
         targetsSkyStone.activate();
         while (!isStopRequested()) {
-
+                moveForward(12);
             // check all the trackable targets to see which one (if any) is visible.
             targetVisible = false;
             for (VuforiaTrackable trackable : allTrackables) {
@@ -411,33 +407,227 @@ public class AutonomousVufSSNavigWC extends LinearOpMode {
                 Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
                 telemetry.addData("Rot (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
                 */
-                // Do all autonomous actions here
-                if (DObject == "Blue Perimeter 2") {
+                // Do all autonomous detection actions here
+                if (Objects.equals(DObject, "Blue Perimeter 2")) {
                     //do upper left corner actions (L3-37)
                     telemetry.addData("Visible Target", DObject);
-
-                } else if (DObject == "Blue Perimeter 1"){
+                    telemetry.update();
+                    sleep(1000);
+                    targetsSkyStone.deactivate();
+                    positionOfRobot = "UpperLeft";
+                } else if (Objects.equals(DObject, "Blue Perimeter 1")){
                     //do bottom left corner actions (BB8)
                     telemetry.addData("Visible Target", DObject);
-                } else if (DObject == "Red Perimeter 1"){
+                    telemetry.update();
+                    sleep(1000);
+                    targetsSkyStone.deactivate();
+                    positionOfRobot = "BottomLeft";
+                } else if (Objects.equals(DObject, "Red Perimeter 1")){
                     //do upper right corner actions (c3po)
                     telemetry.addData("Visible Target", DObject);
-                } else if (DObject == "Red Perimeter 2"){
+                    telemetry.update();
+                    sleep(1000);
+                    targetsSkyStone.deactivate();
+                    positionOfRobot = "UpperRight";
+
+                } else if (Objects.equals(DObject, "Red Perimeter 2")){
                     //do bottom right corner actions (yellow machine)
                     telemetry.addData("Visible Target", DObject);
+                    telemetry.update();
+                    sleep(1000);
+                    targetsSkyStone.deactivate();
+                    positionOfRobot = "BottomRight";
+
                 } else {
                     telemetry.addData("Visible Target", DObject);
+                    telemetry.update();
+                    positionOfRobot = "Unknown";
                 }
             }
             else {
                 telemetry.addData("Visible Target", "none");
+                telemetry.update();
+                positionOfRobot = "Unknown";
             }
             telemetry.update();
         }
+        telemetry.update();
 
         // Disable Tracking when we are done;
         targetsSkyStone.deactivate();
 
+        while (!(positionOfRobot.equals("Unknown"))) {
+            switch (positionOfRobot) {
+                case "UpperLeft":
+                    //do upper left actions
+                    break;
+                case "BottomLeft":
+                    //do bottom left actions
+                    break;
+                case "UpperRight":
+                    //do upper right actions
+                    break;
+                case "BottomRight":
+                    //do bottom right actions
+                    break;
+            }
+
+        }
+
+    }
+
+    private void resetAngle()
+    {
+        lastAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+        globalAngle = 0;
+    }
+
+    /**
+     * Get current cumulative angle rotation from last reset.
+     * @return Angle in degrees. + = left, - = right.
+     */
+    private double getAngle()
+    {
+        // We experimentally determined the Z axis is the axis we want to use for heading angle.
+        // We have to process the angle because the imu works in euler angles so the Z axis is
+        // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
+        // 180 degrees. We detect this transition and track the total cumulative angle of rotation.
+
+        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+        double deltaAngle = angles.firstAngle - lastAngles.firstAngle;
+
+        if (deltaAngle < -180)
+            deltaAngle += 360;
+        else if (deltaAngle > 180)
+            deltaAngle -= 360;
+
+        globalAngle += deltaAngle;
+
+        lastAngles = angles;
+
+        return globalAngle;
+    }
+
+    /**
+     * See if we are moving in a straight line and if not return a power correction value.
+     * @return Power adjustment, + is adjust left - is adjust right.
+     */
+    private double checkDirection()
+    {
+        // The gain value determines how sensitive the correction is to direction changes.
+        // You will have to experiment with your robot to get small smooth direction changes
+        // to stay on a straight line.
+        double correction, angle, gain = .10;
+
+        angle = getAngle();
+
+        if (angle == 0)
+            correction = 0;             // no adjustment.
+        else
+            correction = -angle;        // reverse sign of angle for correction.
+
+        correction = correction * gain;
+
+        return correction;
+    }
+
+    /**
+     * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
+     * @param degrees Degrees to turn, + is left - is right
+     */
+    private void rotate(int degrees, double power)
+    {
+        double  leftPower, rightPower;
+
+        // restart imu movement tracking.
+        resetAngle();
+
+        // getAngle() returns + when rotating counter clockwise (left) and - when rotating
+        // clockwise (right).
+
+        if (degrees < 0)
+        {   // turn right.
+            leftPower = power;
+            rightPower = -power;
+        }
+        else if (degrees > 0)
+        {   // turn left.
+            leftPower = -power;
+            rightPower = power;
+        }
+        else return;
+
+        // set power to rotate.
+        leftMotor.setPower(leftPower);
+        rightMotor.setPower(rightPower);
+
+        // rotate until turn is completed.
+        if (degrees < 0) {
+            // On right turn we have to get off zero first.
+            while (opModeIsActive() && getAngle() == 0) {}
+
+            while (opModeIsActive() && getAngle() > degrees) {}
+        }
+        else    // left turn.
+            while (opModeIsActive() && getAngle() < degrees) {}
+
+        // turn the motors off.
+        rightMotor.setPower(0);
+        leftMotor.setPower(0);
+
+        // wait for rotation to stop.
+        sleep(1000);
+
+        // reset angle tracking on new heading.
+        resetAngle();
+    }
+    public double getCurrentInches (DcMotor motor) {
+        return (motor.getCurrentPosition()) /COUNTS_PER_INCH;
+    }
+    public void moveForward (double targetInches) {
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        while((getCurrentInches(leftMotor) <= targetInches)&&(getCurrentInches(rightMotor) <= targetInches)) {
+            correction = checkDirection();
+
+            telemetry.addData("1 imu heading", lastAngles.firstAngle);
+            telemetry.addData("2 global heading", globalAngle);
+            telemetry.addData("3 correction", correction);
+            telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
+            telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
+            telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
+            telemetry.update();
+
+            leftMotor.setPower((power - correction));
+            rightMotor.setPower((power + correction));
+
+        }
+    }
+
+    public void moveBack (double targetInches) {
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        while((getCurrentInches(leftMotor) >= targetInches)&&(getCurrentInches(rightMotor) >= targetInches)) {
+            correction = checkDirection();
+
+            telemetry.addData("1 imu heading", lastAngles.firstAngle);
+            telemetry.addData("2 global heading", globalAngle);
+            telemetry.addData("3 correction", correction);
+            telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
+            telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
+            telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
+            telemetry.update();
+
+            leftMotor.setPower((power - correction));
+            rightMotor.setPower((power + correction));
+
+        }
     }
     public void driveWithEncoder(double speed, double leftInches, double rightInches, double strafeInches, double timeoutS) {
         int newLeftTarget;
