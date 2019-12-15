@@ -142,10 +142,13 @@ public class Forward extends OpMode {
         if(gamepad1.left_bumper) {
             leftPower  = (gamepad1.left_stick_y) / 1.75;
             rightPower = (gamepad1.right_stick_y) / 1.75;
-        } else {
+        }
+        else {
             leftPower  = (gamepad1.left_stick_y);
             rightPower = (gamepad1.right_stick_y);
         }
+
+
         strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
         liftPower = (gamepad2.left_stick_y) / -1.5;
 
