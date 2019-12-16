@@ -592,6 +592,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
         leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+
         while((getCurrentInches(leftMotor) <= targetInches)&&(getCurrentInches(rightMotor) <= targetInches)) {
             correction = checkDirection();
 
@@ -624,8 +625,8 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
             telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
             telemetry.update();
 
-            leftMotor.setPower((power - correction));
-            rightMotor.setPower((power + correction));
+            leftMotor.setPower((power + correction)*-1);
+            rightMotor.setPower((power - correction)*-1);
 
         }
     }

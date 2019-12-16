@@ -1,4 +1,5 @@
 dependencies {
+    implementation project(':HOMAR-FTC-Library')
     implementation (name:'Inspection-release', ext: 'aar')
     implementation (name:'Blocks-release', ext: 'aar')
     implementation (name:'RobotCore-release', ext: 'aar')
