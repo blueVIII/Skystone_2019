@@ -52,6 +52,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 @TeleOp(name="Slide Drive", group="Linear Opmode")
 //@Disabled
 public class Forward extends OpMode {
+    HardwareRobot robot = new HardwareRobot();
     //private DcMotor leftDrive = null;
     //private DcMotor rightDrive = null;
 
@@ -70,13 +71,12 @@ public class Forward extends OpMode {
     private double rightPower;
     private double strafePower;
     private double liftPower;
-    boolean clawIsOpen = true;
-    boolean foundationServoOpen = true;
 
 
     // Declare OpMode members.
     @Override
     public void init() {
+
         telemetry.addData("Status", "Initialized");
         telemetry.update();
         leftMotor = hardwareMap.dcMotor.get("Left_Motor");

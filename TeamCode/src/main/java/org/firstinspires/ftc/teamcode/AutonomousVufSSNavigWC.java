@@ -32,7 +32,9 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -92,6 +94,8 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
 //@Disabled
 public class AutonomousVufSSNavigWC extends LinearOpMode  {
 
+    ColorSensor sensorColor;
+    DistanceSensor sensorDistance;
     // IMPORTANT: If you are using a USB WebCam, you must select CAMERA_CHOICE = BACK; and PHONE_IS_PORTRAIT = false;
     private static final VuforiaLocalizer.CameraDirection CAMERA_CHOICE = BACK;
     private static final boolean PHONE_IS_PORTRAIT = false  ;
@@ -131,6 +135,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
     private static final float bridgeRotY = 59;                                 // Units are degrees
     private static final float bridgeRotZ = 180;
 
+
     // Initialization parameters for 15343
     private ElapsedTime runtime = new ElapsedTime();
     String xyz = "z";
@@ -148,6 +153,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
     private DcMotor liftMotor = null;
     private Servo foundationServo1 = null;
     private Servo foundationServo2 = null;
+    private Servo armServo = null;
 
     BNO055IMU imu;
     String positionOfRobot = "";
@@ -160,7 +166,6 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
     // Class Members
     private OpenGLMatrix lastLocation = null;
     private VuforiaLocalizer vuforia = null;
-    //public interface VuforiaLocalizer extends CameraStreamSource {
 
     /**
      * This is the webcam we are to use. As with other hardware devices such as motors and
@@ -173,6 +178,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
     private float phoneYRotate    = 0;
     private float phoneZRotate    = 0;
     private String DObject = null;
+    int locationOfSkystoneFromTop;
 
     @Override public void runOpMode() {
         /*
@@ -185,6 +191,12 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
         liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
         foundationServo1 = hardwareMap.servo.get("Foundation_Servo1");
         foundationServo2 = hardwareMap.servo.get("Foundation_Servo2");
+        armServo = hardwareMap.servo.get("Arm_Servo");
+        sensorColor = hardwareMap.get(ColorSensor.class, "color");
+
+        // get a reference to the distance sensor that shares the same name.
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "color");
+
 
         // Send telemetry message to signify robot waiting;
         telemetry.addData("Status", "Resetting Encoders");    //
@@ -199,6 +211,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
         //reverse the motors so the robot drives straight
         leftMotor.setDirection(DcMotor.Direction.FORWARD);
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
+        boolean skystone;
 
 
         /*
@@ -256,80 +269,6 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
         List<VuforiaTrackable> allTrackables = new ArrayList<>();
         allTrackables.addAll(targetsSkyStone);
 
-        /**
-         * In order for localization to work, we need to tell the system where each target is on the field, and
-         * where the phone resides on the robot.  These specifications are in the form of <em>transformation matrices.</em>
-         * Transformation matrices are a central, important concept in the math here involved in localization.
-         * See <a href="https://en.wikipedia.org/wiki/Transformation_matrix">Transformation Matrix</a>
-         * for detailed information. Commonly, you'll encounter transformation matrices as instances
-         * of the {@link OpenGLMatrix} class.
-         *
-         * If you are standing in the Red Alliance Station looking towards the center of the field,
-         *     - The X axis runs from your left to the right. (positive from the center to the right)
-         *     - The Y axis runs from the Red Alliance Station towards the other side of the field
-         *       where the Blue Alliance Station is. (Positive is from the center, towards the BlueAlliance station)
-         *     - The Z axis runs from the floor, upwards towards the ceiling.  (Positive is above the floor)
-         *
-         * Before being transformed, each target image is conceptually located at the origin of the field's
-         *  coordinate system (the center of the field), facing up.
-         */
-
-        // Set the position of the Stone Target.  Since it's not fixed in position, assume it's at the field origin.
-        // Rotated it to to face forward, and raised it to sit on the ground correctly.
-        // This can be used for generic target-centric approach algorithms
-        stoneTarget.setLocation(OpenGLMatrix
-                .translation(0, 0, stoneZ)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, -90)));
-
-        //Set the position of the bridge support targets with relation to origin (center of field)
-        blueFrontBridge.setLocation(OpenGLMatrix
-                .translation(-bridgeX, bridgeY, bridgeZ)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 0, bridgeRotY, bridgeRotZ)));
-
-        blueRearBridge.setLocation(OpenGLMatrix
-                .translation(-bridgeX, bridgeY, bridgeZ)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 0, -bridgeRotY, bridgeRotZ)));
-
-        redFrontBridge.setLocation(OpenGLMatrix
-                .translation(-bridgeX, -bridgeY, bridgeZ)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 0, -bridgeRotY, 0)));
-
-        redRearBridge.setLocation(OpenGLMatrix
-                .translation(bridgeX, -bridgeY, bridgeZ)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 0, bridgeRotY, 0)));
-
-        //Set the position of the perimeter targets with relation to origin (center of field)
-        red1.setLocation(OpenGLMatrix
-                .translation(quadField, -halfField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 180)));
-
-        red2.setLocation(OpenGLMatrix
-                .translation(-quadField, -halfField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 180)));
-
-        front1.setLocation(OpenGLMatrix
-                .translation(-halfField, -quadField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0 , 90)));
-
-        front2.setLocation(OpenGLMatrix
-                .translation(-halfField, quadField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 90)));
-
-        blue1.setLocation(OpenGLMatrix
-                .translation(-quadField, halfField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 0)));
-
-        blue2.setLocation(OpenGLMatrix
-                .translation(quadField, halfField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 0)));
-
-        rear1.setLocation(OpenGLMatrix
-                .translation(halfField, quadField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0 , -90)));
-
-        rear2.setLocation(OpenGLMatrix
-                .translation(halfField, -quadField, mmTargetHeight)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, -90)));
 
         //
         // Create a transformation matrix describing where the phone is on the robot.
@@ -358,7 +297,6 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
                 .translation(CAMERA_FORWARD_DISPLACEMENT, CAMERA_LEFT_DISPLACEMENT, CAMERA_VERTICAL_DISPLACEMENT)
                 .multiplied(Orientation.getRotationMatrix(EXTRINSIC, YZX, DEGREES, phoneYRotate, phoneZRotate, phoneXRotate));
 
-        /**  Let all the trackable listeners know where the phone is.  */
         for (VuforiaTrackable trackable : allTrackables) {
             ((VuforiaTrackableDefaultListener) trackable.getListener()).setPhoneInformation(robotFromCamera, parameters.cameraDirection);
         }
@@ -377,7 +315,6 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
 
         targetsSkyStone.activate();
         while (!isStopRequested()) {
-            moveForward(12);
             // check all the trackable targets to see which one (if any) is visible.
             targetVisible = false;
             for (VuforiaTrackable trackable : allTrackables) {
@@ -385,7 +322,6 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
                     telemetry.addData("Visible Target", trackable.getName());
                     targetVisible = true;
                     DObject= trackable.getName();
-
                     // getUpdatedRobotLocation() will return null if no new information is available since
                     // the last time that call was made, or if the trackable is not currently visible.
                     OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
@@ -395,7 +331,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
                     break;
                 }
             }
-
+            moveBack(12);
             // Provide feedback as to where the robot is located (if we know).
             if (targetVisible) {
                 /*// express position (translation) of robot in inches.
@@ -457,24 +393,147 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
         targetsSkyStone.deactivate();
 
         while (!(positionOfRobot.equals("Unknown"))) {
-            switch (positionOfRobot) {
-                case "UpperLeft":
-                    //do upper left actions
-                    break;
-                case "BottomLeft":
-                    //do bottom left actions
-                    break;
-                case "UpperRight":
-                    //do upper right actions
-                    break;
-                case "BottomRight":
-                    //do bottom right actions
-                    break;
+            if (positionOfRobot.equals("UpperLeft")) {
+                moveBack(28);
+                deployClaws();
+                moveForward(40);
+                retractClaws();
+            } else if (positionOfRobot.equals("BottomLeft")) {
+                moveRightStrafeMotor(8,0.75);
+                moveBack(35.5);
+                if (((sensorColor.red()*sensorColor.green())/(sensorColor.blue()*sensorColor.blue())<3)) {
+                    skystone = true;
+                    locationOfSkystoneFromTop++;
+                } else {
+                    skystone = false;
+                    locationOfSkystoneFromTop++;
+                }
+                if(skystone){
+                    rotate(180,0.75);
+                    moveForward(6);
+                    rotate(90, 0.75);
+                    moveLeftStrafeMotor(18,0.75); //17.5
+                    moveForward(30 + (8 * locationOfSkystoneFromTop));
+                } else {
+                    moveLeftStrafeMotor(8,0.75);
+                }
+
+            } else if (positionOfRobot.equals("UpperRight")) {
+                moveBack(28);
+                deployClaws();
+                moveForward(40);
+                retractClaws();
+            } else if (positionOfRobot.equals("BottomRight")) {
+                moveLeftStrafeMotor(8,0.75);
+                moveBack(35.5);
+                if (((sensorColor.red()*sensorColor.green())/(sensorColor.blue()*sensorColor.blue())<3)) {
+                    skystone = true;
+                    locationOfSkystoneFromTop++;
+                } else {
+                    skystone = false;
+                    locationOfSkystoneFromTop++;
+                }
+                if(skystone){
+                    rotate(-180,0.75);
+                    moveForward(6);
+                    rotate(-90, 0.75);
+                    moveRightStrafeMotor(18,0.75); //17.5
+                    moveForward(30 + (8 * locationOfSkystoneFromTop));
+                } else {
+                    moveRightStrafeMotor(8,0.75);
+                }
+
+
             }
 
         }
 
     }
+    public void moveRightStrafeMotor(double targetInchesStrafe, double power) {
+        double strafeInches = targetInchesStrafe;
+        int newStrafeTarget = strafeMotor.getCurrentPosition() + (int)(strafeInches *COUNTS_PER_INCH);
+        strafeMotor.setPower(power);
+        while (opModeIsActive()) {
+            if(strafeMotor.getCurrentPosition() + 50 > newStrafeTarget) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                break;
+            }
+        }
+    }
+    public void moveLeftStrafeMotor(double targetInchesStrafe, double power) {
+        double strafeInches = targetInchesStrafe;
+        int newStrafeTarget = strafeMotor.getCurrentPosition() + (int)(strafeInches *COUNTS_PER_INCH);
+        strafeMotor.setPower(-power);
+        while (opModeIsActive()) {
+            if(strafeMotor.getCurrentPosition() + 50 > newStrafeTarget) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                break;
+            }
+        }
+    }
+    public void deployClaws() {
+        foundationServo1.setPosition(1);
+        foundationServo2.setPosition(0);
+    }
+    public void retractClaws() {
+        foundationServo1.setPosition(0);
+        foundationServo2.setPosition(1);
+    }
+    public void moveForward(double targetInches) {
+        //DEFINE MOVEMENT VALUES:
+        //MOVE TO FOUNDATION:
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        double leftInches = targetInches;
+        double rightInches = targetInches;
+        int newLeftTarget = leftMotor.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
+        int newRightTarget = rightMotor.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+
+        leftMotor.setTargetPosition(newLeftTarget);
+        rightMotor.setTargetPosition(newRightTarget);
+
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        while(opModeIsActive()) {
+            // Use gyro to drive in a straight line.
+            correction = checkDirection();
+            leftMotor.setPower((power - correction) * 1.5);
+            rightMotor.setPower((power + correction)* 1.5);
+            telemetry.addData("Left Motor Position", leftMotor.getCurrentPosition());
+            telemetry.update();
+            if(leftMotor.getCurrentPosition() + 50 > newLeftTarget && rightMotor.getCurrentPosition() + 50 > newRightTarget ) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                break;
+            }
+        }
+    }
+    public void moveBack(double targetInches) {
+
+        double leftInches = targetInches;
+        double rightInches = targetInches;
+        int newLeftTarget = leftMotor.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH * -1);
+        int newRightTarget = rightMotor.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH * -1);
+
+        while(opModeIsActive()) {
+            correction = checkDirection();
+            leftMotor.setPower((power + correction) * -1.5);
+            rightMotor.setPower((power - correction)* -1.5);
+            telemetry.addData("Left Motor Position", leftMotor.getCurrentPosition());
+            telemetry.update();
+            if(leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                break;
+            }
+        }
+    }
+
+
 
     private void resetAngle()
     {
@@ -533,10 +592,9 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
         return correction;
     }
 
-    /**
-     * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
-     * @param degrees Degrees to turn, + is left - is right
-     */
+    //If degrees positive, it will turn left
+    //If degrees negative, it will turn right
+    //Cannot turn more than 180 degrees
     private void rotate(int degrees, double power)
     {
         double  leftPower, rightPower;
@@ -586,50 +644,7 @@ public class AutonomousVufSSNavigWC extends LinearOpMode  {
     public double getCurrentInches (DcMotor motor) {
         return (motor.getCurrentPosition()) /COUNTS_PER_INCH;
     }
-    public void moveForward (double targetInches) {
-        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-
-        while((getCurrentInches(leftMotor) <= targetInches)&&(getCurrentInches(rightMotor) <= targetInches)) {
-            correction = checkDirection();
-
-            telemetry.addData("1 imu heading", lastAngles.firstAngle);
-            telemetry.addData("2 global heading", globalAngle);
-            telemetry.addData("3 correction", correction);
-            telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
-            telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
-            telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
-            telemetry.update();
-
-            leftMotor.setPower((power - correction));
-            rightMotor.setPower((power + correction));
-
-        }
-    }
-
-    public void moveBack (double targetInches) {
-        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        while((getCurrentInches(leftMotor) >= targetInches)&&(getCurrentInches(rightMotor) >= targetInches)) {
-            correction = checkDirection();
-
-            telemetry.addData("1 imu heading", lastAngles.firstAngle);
-            telemetry.addData("2 global heading", globalAngle);
-            telemetry.addData("3 correction", correction);
-            telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
-            telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
-            telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
-            telemetry.update();
-
-            leftMotor.setPower((power + correction)*-1);
-            rightMotor.setPower((power - correction)*-1);
-
-        }
-    }
     public void driveWithEncoder(double speed, double leftInches, double rightInches, double strafeInches, double timeoutS) {
         int newLeftTarget;
         int newRightTarget;
