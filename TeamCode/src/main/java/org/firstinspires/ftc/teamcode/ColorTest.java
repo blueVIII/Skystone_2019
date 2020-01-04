@@ -119,6 +119,7 @@ public class ColorTest extends LinearOpMode {
             } else {
                 telemetry.addData("What am I looking at?", "Not a Skystone :(");
                 telemetry.update();
+
             }
 
             // change the background color to match the color detected by the RGB sensor.

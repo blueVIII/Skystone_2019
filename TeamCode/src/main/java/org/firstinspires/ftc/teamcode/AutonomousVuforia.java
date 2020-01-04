@@ -1,21 +1,41 @@
-// Simple autonomous program that drives bot forward until end of period
-// or touch sensor is hit. If touched, backs up a bit and turns 90 degrees
-// right and keeps going. Demonstrates obstacle avoidance and use of the
-// REV Hub's built in IMU in place of a gyro. Also uses gamepad1 buttons to
-// simulate touch sensor press and supports left as well as right turn.
-//
-// Also uses IMU to drive in a straight line when not avoiding an obstacle.
+/* Copyright (c) 2019 FIRST. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice, this list
+ * of conditions and the following disclaimer.
+ *
+ * Redistributions in binary form must reproduce the above copyright notice, this
+ * list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * Neither the name of FIRST nor the names of its contributors may be used to endorse or
+ * promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
+ * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -25,28 +45,44 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
-import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
+import org.firstinspires.ftc.teamcode.util.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
 import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.YZX;
 import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
 
-@Autonomous(name="Autonomous Program", group="Exercises")
-@Disabled
-public class AutonomousVuforia extends LinearOpMode
-{
 
+@Autonomous(name="SKYSTONE Vuforia Nav Webcam", group ="Linear Opmode")
+//@Disabled
+public class AutonomousVuforia extends LinearOpMode {
+
+    private ColorSensor sensorColor;
+    private DistanceSensor sensorDistance;
+    // IMPORTANT: If you are using a USB WebCam, you must select CAMERA_CHOICE = BACK; and PHONE_IS_PORTRAIT = false;
     private static final VuforiaLocalizer.CameraDirection CAMERA_CHOICE = BACK;
-    private static final boolean PHONE_IS_PORTRAIT = false  ;
+    private static final boolean PHONE_IS_PORTRAIT = false;
+
+    /*
+     * IMPORTANT: You need to obtain your own license key to use Vuforia. The string below with which
+     * 'parameters.vuforiaLicenseKey' is initialized is for illustration only, and will not function.
+     * A Vuforia 'Development' license key, can be obtained free of charge from the Vuforia developer
+     * web site at https://developer.vuforia.com/license-manager.
+     *
+     * Vuforia license keys are always 380 characters long, and look as if they contain mostly
+     * random data. As an example, here is a example of a fragment of a valid key:
+     *      ... yIgIzTqZ4mWjk9wd3cZO9T1axEqzuhxoGlfOOI2dRzKS4T0hQ8kT ...
+     * Once you've obtained a license key, copy the string from the Vuforia web site
+     * and paste it in to your code on the next line, between the double quotes.
+     */
     private static final String VUFORIA_KEY =
             "Ac5+EOX/////AAABmYZoDckxSUV7iTj4MtRwiJpvftO8hpoEtcxmCLD\n"
                     + "olUOn81SCtt0u8igYx5S9Gz9UpcHI66Vto0Wy1IhFoZ4J36MXjIwxdHCb/81+4+4DhbQ2tWq9Xisz4NvAu2l1IN8uj6\n"
@@ -54,97 +90,123 @@ public class AutonomousVuforia extends LinearOpMode
                     + "Ad47NYB8TXuOwY0N8bL9+jPNPaw3E2SgOU2imUU6kCAQvrUPF24AI1FqtvlhZbeYLe/EQVJaC2fqcODw2Xp5pxj1h4l\n"
                     + "S6tGXQqRZ1we0i4Wf/S+1/A4GDcb3B7hfpkRJP6AYvLxisBlP2qj";
 
+    // Since ImageTarget trackables use mm to specifiy their dimensions, we must use mm for all the physical dimension.
+    // We will define some constants and conversions here
+    private static final float mmPerInch = 25.4f;
+    private static final float mmTargetHeight = (6) * mmPerInch;          // the height of the center of the target image above the floor
+    Orientation lastAngles = new Orientation();
+    double globalAngle, power = .80, correction, rotation;
 
-    BNO055IMU               imu;
-    Orientation             lastAngles = new Orientation();
-    double                  globalAngle, power = .3, correction;
-    static final double     COUNTS_PER_MOTOR_REV    = 2240;    // eg: TETRIX Motor Encoder
-    static final double     DRIVE_GEAR_REDUCTION    = 0.5 ;     // This is < 1.0 if geared UP
-    static final double     WHEEL_DIAMETER_INCHES   = 3.54331 ;     // For figuring circumference
-    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
-    static final double     DRIVE_SPEED             = 0.6;
-    private static final float mmPerInch        = 25.4f;
-    //private static final float mmTargetHeight   = (6) * mmPerInch;          // the height of the center of the target image above the floor
-
-    // Constant for Stone Target
-    //private static final float stoneZ = 2.00f * mmPerInch;
-
-    // Constants for the center support targets
-    //private static final float bridgeZ = 6.42f * mmPerInch;
-    //private static final float bridgeY = 23 * mmPerInch;
-    //private static final float bridgeX = 5.18f * mmPerInch;
-    //private static final float bridgeRotY = 59;                                 // Units are degrees
-    //private static final float bridgeRotZ = 180;
 
     // Initialization parameters for 15343
-    //String xyz = "z";
-    private DcMotor leftMotor = null;
-    private DcMotor rightMotor = null;
-    private DcMotor strafeMotor = null;
-    private DcMotor liftMotor = null;
-    private Servo foundationServo1 = null;
-    private Servo foundationServo2 = null;
+    private ElapsedTime runtime = new ElapsedTime();
+    String xyz = "z";
+    //CONTAINS ALL METHODS AND VARIABlES TO BE EXTENDED BY OTHER AUTON CLASSES
+    static final double COUNTS_PER_MOTOR_REV = 2240;    // eg: TETRIX Motor Encoder
+    static final double DRIVE_GEAR_REDUCTION = .6;     // This is < 1.0 if geared UP
+    static final double WHEEL_DIAMETER_INCHES = 3.54331;     // For figuring circumference
+    static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * Math.PI);
+    static final double DRIVE_SPEED = 0.6;
+    static final double TURN_SPEED = 0.5;
 
+    private DcMotor leftMotor;
+    private DcMotor rightMotor;
+    private DcMotor strafeMotor;
+    private Servo foundationServo1;
+    private Servo foundationServo2;
+
+    private BNO055IMU imu;
+    private String positionOfRobot = "";
+    // Class Members
+    private OpenGLMatrix lastLocation = null;
     private VuforiaLocalizer vuforia = null;
 
+    /**
+     * This is the webcam we are to use. As with other hardware devices such as motors and
+     * servos, this device is identified using the robot configuration tool in the FTC application.
+     */
     WebcamName webcamName = null;
 
     private boolean targetVisible = false;
-    private float phoneXRotate    = 0;
-    private float phoneYRotate    = 0;
-    private float phoneZRotate    = 0;
+    private float phoneXRotate = 0;
+    private float phoneYRotate = 0;
+    private float phoneZRotate = 0;
     private String DObject = null;
+    private int locationOfSkystoneFromTop;
+    PIDController pidRotate = new PIDController(.003, .00003, 0);
+    PIDController pidDrive = new PIDController(2.05, 0.1, 0.2);
 
-    // called when init button is  pressed.
+
     @Override
     public void runOpMode() throws InterruptedException {
-        //INITIATE MOTORS AND SERVOS
+        /*
+         * Retrieve the camera we are to use.
+         */
         webcamName = hardwareMap.get(WebcamName.class, "Webcam");
         leftMotor = hardwareMap.dcMotor.get("Left_Motor");
         rightMotor = hardwareMap.dcMotor.get("Right_Motor");
         strafeMotor = hardwareMap.dcMotor.get("Strafe_Motor");
-        liftMotor = hardwareMap.dcMotor.get("Lift_Motor");
         foundationServo1 = hardwareMap.servo.get("Foundation_Servo1");
         foundationServo2 = hardwareMap.servo.get("Foundation_Servo2");
+        sensorColor = hardwareMap.get(ColorSensor.class, "color");
 
-        leftMotor.setDirection(DcMotor.Direction.REVERSE);
+        // get a reference to the distance sensor that shares the same name.
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "color");
 
-        leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        strafeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        // Send telemetry message to signify robot waiting;
+        telemetry.addData("Status", "Resetting Encoders");    //
+        telemetry.update();
+
+        //reset encoder values
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        strafeMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         //reverse the motors so the robot drives straight
+        leftMotor.setDirection(DcMotor.Direction.REVERSE);
+        rightMotor.setDirection(DcMotor.Direction.FORWARD);
+        boolean skystone; //True if has skystone, false if not
 
 
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        BNO055IMU.Parameters parametersIMU = new BNO055IMU.Parameters();
 
-        parameters.mode                = BNO055IMU.SensorMode.IMU;
-        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.loggingEnabled      = false;
+        parametersIMU.mode = BNO055IMU.SensorMode.IMU;
+        parametersIMU.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parametersIMU.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parametersIMU.loggingEnabled = false;
 
-
-        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
-        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
-        // and named "imu".
         imu = hardwareMap.get(BNO055IMU.class, "imu");
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        VuforiaLocalizer.Parameters parameters1 = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
-        parameters1.vuforiaLicenseKey = VUFORIA_KEY;
-        parameters1.cameraName = webcamName;
-        vuforia = ClassFactory.getInstance().createVuforia(parameters1);
+        imu.initialize(parametersIMU);
 
+
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
+
+        // VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
+
+        parameters.vuforiaLicenseKey = VUFORIA_KEY;
+
+        parameters.cameraName = webcamName;
+
+        //  Instantiate the Vuforia engine
+        vuforia = ClassFactory.getInstance().createVuforia(parameters);
+
+        // Load the data sets for the trackable objects. These particular data
+        // sets are stored in the 'assets' part of our application.
         VuforiaTrackables targetsSkyStone = this.vuforia.loadTrackablesFromAsset("Skystone");
 
         VuforiaTrackable stoneTarget = targetsSkyStone.get(0);
         stoneTarget.setName("Stone Target");
-
+        VuforiaTrackable blueRearBridge = targetsSkyStone.get(1);
+        blueRearBridge.setName("Blue Rear Bridge");
+        VuforiaTrackable redRearBridge = targetsSkyStone.get(2);
+        redRearBridge.setName("Red Rear Bridge");
+        VuforiaTrackable redFrontBridge = targetsSkyStone.get(3);
+        redFrontBridge.setName("Red Front Bridge");
+        VuforiaTrackable blueFrontBridge = targetsSkyStone.get(4);
+        blueFrontBridge.setName("Blue Front Bridge");
         VuforiaTrackable red1 = targetsSkyStone.get(5);
         red1.setName("Red Perimeter 1");
         VuforiaTrackable red2 = targetsSkyStone.get(6);
@@ -162,228 +224,314 @@ public class AutonomousVuforia extends LinearOpMode
         VuforiaTrackable rear2 = targetsSkyStone.get(12);
         rear2.setName("Rear Perimeter 2");
 
-        List<VuforiaTrackable> allTrackables = new ArrayList<VuforiaTrackable>();
-        allTrackables.addAll(targetsSkyStone);
+        // For convenience, gather together all the trackable objects in one easily-iterable collection */
+        List<VuforiaTrackable> allTrackables = new ArrayList<>(targetsSkyStone);
 
-        if (CAMERA_CHOICE == BACK) {
-            phoneYRotate = -90;
-        } else {
-            phoneYRotate = 90;
-        }
 
-        // Rotate the phone vertical about the X axis if it's in portrait mode
-        if (PHONE_IS_PORTRAIT) {
-            phoneXRotate = 90 ;
-        }
-        final float CAMERA_FORWARD_DISPLACEMENT  = 4.0f * mmPerInch;   // eg: Camera is 4 Inches in front of robot-center
+        //
+        // Create a transformation matrix describing where the phone is on the robot.
+        //
+        // NOTE !!!!  It's very important that you turn OFF your phone's Auto-Screen-Rotation option.
+        // Lock it into Portrait for these numbers to work.
+        //
+        // Info:  The coordinate frame for the robot looks the same as the field.
+        // The robot's "forward" direction is facing out along X axis, with the LEFT side facing out along the Y axis.
+        // Z is UP on the robot.  This equates to a bearing angle of Zero degrees.
+        //
+        // The phone starts out lying flat, with the screen facing Up and with the physical top of the phone
+        // pointing to the LEFT side of the Robot.
+        // The two examples below assume that the camera is facing forward out the front of the robot.
+
+        // We need to rotate the camera around it's long axis to bring the correct camera forward.
+
+
+        // Next, translate the camera lens to where it is on the robot.
+        // In this example, it is centered (left to right), but forward of the middle of the robot, and above ground level.
+        final float CAMERA_FORWARD_DISPLACEMENT = 4.0f * mmPerInch;   // eg: Camera is 4 Inches in front of robot-center
         final float CAMERA_VERTICAL_DISPLACEMENT = 8.0f * mmPerInch;   // eg: Camera is 8 Inches above ground
-        final float CAMERA_LEFT_DISPLACEMENT     = 0;     // eg: Camera is ON the robot's center line
+        final float CAMERA_LEFT_DISPLACEMENT = 0;     // eg: Camera is ON the robot's center line
 
         OpenGLMatrix robotFromCamera = OpenGLMatrix
                 .translation(CAMERA_FORWARD_DISPLACEMENT, CAMERA_LEFT_DISPLACEMENT, CAMERA_VERTICAL_DISPLACEMENT)
                 .multiplied(Orientation.getRotationMatrix(EXTRINSIC, YZX, DEGREES, phoneYRotate, phoneZRotate, phoneXRotate));
 
-        /**  Let all the trackable listeners know where the phone is.  */
         for (VuforiaTrackable trackable : allTrackables) {
-            ((VuforiaTrackableDefaultListener) trackable.getListener()).setPhoneInformation(robotFromCamera, parameters1.cameraDirection);
+            ((VuforiaTrackableDefaultListener) trackable.getListener()).setPhoneInformation(robotFromCamera, parameters.cameraDirection);
         }
 
-        targetVisible = false;
-        for (VuforiaTrackable trackable : allTrackables) {
-            if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
-                telemetry.addData("Visible Target", trackable.getName());
-                targetVisible = true;
-                DObject= trackable.getName();
-                break;
-            }
-        }
-        imu.initialize(parameters);
-
-        telemetry.addData("Mode", "calibrating...");
-        telemetry.update();
-
-        // make sure the imu gyro is calibrated before continuing.
-        while (!isStopRequested() && !imu.isGyroCalibrated())
-        {
-            sleep(50);
-            idle();
-        }
-        telemetry.addData("Mode", "waiting for start");
-        telemetry.addData("imu calibration status", imu.getCalibrationStatus().toString());
-        telemetry.update();
-
-        // wait for start button.
+        // WARNING:
+        // In this sample, we do not wait for PLAY to be pressed.  Target Tracking is started immediately when INIT is pressed.
+        // This sequence is used to enable the new remote DS Camera Preview feature to be used with this sample.
+        // CONSEQUENTLY do not put any driving commands in this loop.
+        // To restore the normal opmode structure, just un-comment the following line:
 
         waitForStart();
 
-        telemetry.addData("Mode", "running");
-        telemetry.update();
+        // Note: To use the remote camera preview:
+        // AFTER you hit Init on the Driver Station, use the "options menu" to select "Camera Stream"
+        // Tap the preview window to receive a fresh image.
+        while (opModeIsActive()) {
+            targetsSkyStone.activate();
+            while (opModeIsActive()) {
+                // check all the trackable targets to see which one (if any) is visible.
+                targetVisible = false;
+                for (VuforiaTrackable trackable : allTrackables) {
+                    if ((((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible())&&opModeIsActive()) {
+                        telemetry.addData("Visible Target", trackable.getName());
+                        targetVisible = true;
+                        DObject = trackable.getName();
+                        // getUpdatedRobotLocation() will return null if no new information is available since
+                        // the last time that call was made, or if the trackable is not currently visible.
+                        OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                        if (robotLocationTransform != null) {
+                            lastLocation = robotLocationTransform;
+                        }
+                        break;
+                    }
+                }
+                moveBack(12);
+                if (targetVisible &&opModeIsActive()) {
+                    if (Objects.equals(DObject, "Blue Perimeter 2")&&opModeIsActive()) {
+                        //do upper left corner actions (L3-37)
+                        telemetry.addData("Visible Target", DObject);
+                        telemetry.update();
+                        sleep(1000);
+                        targetsSkyStone.deactivate();
+                        positionOfRobot = "UpperLeft";
+                        break;
+                    } else if (Objects.equals(DObject, "Blue Perimeter 1")&&opModeIsActive()) {
+                        //do bottom left corner actions (BB8)
+                        telemetry.addData("Visible Target", DObject);
+                        telemetry.update();
+                        sleep(1000);
+                        targetsSkyStone.deactivate();
+                        positionOfRobot = "BottomLeft";
+                        break;
+                    } else if (Objects.equals(DObject, "Red Perimeter 1")&&opModeIsActive()) {
+                        //do upper right corner actions (c3po)
+                        telemetry.addData("Visible Target", DObject);
+                        telemetry.update();
+                        sleep(1000);
+                        targetsSkyStone.deactivate();
+                        positionOfRobot = "UpperRight";
+                        break;
 
-        sleep(300);
-        if (targetVisible) {
-            // Do all autonomous actions here
-            if (DObject == "Blue Perimeter 2") {
-                //do upper left corner actions (L3-37)
-                //Move Up 12 inches using strafe wheel
-                //Move forward 24 inches
-                //Deploy claws
-                //Pull back 24 inches
-                //Pull back claws
-                //Move down 48 inches to park
-                telemetry.addData("Visible Target", DObject);
-                telemetry.update();
-            } else if (DObject == "Blue Perimeter 1"){
-                //do bottom left corner actions (BB8)
-                //Move up 8 inches
-                //Move forward 36 inches
-                //
-                telemetry.addData("Visible Target", DObject);
-                telemetry.update();
-            } else if (DObject == "Red Perimeter 1"){
-                //do upper right corner actions (c3po)
-                //Move up 12 inches using the strafe wheel
-                //Move forward 24 inches
-                //Deploy claws
-                //Pull back 24 inches
-                //Pull back claws
-                //Move down 48 inches to park
-                telemetry.addData("Visible Target", DObject);
-                telemetry.update();
-            } else if (DObject == "Red Perimeter 2"){
-                //do bottom right corner actions (yellow machine)
-                telemetry.addData("Visible Target", DObject);
-                telemetry.update();
-            } else if (DObject == "Stone Target"){
-                telemetry.addData("Visible Target", DObject);
-                telemetry.update();
-            }else {
-                telemetry.addData("Visible Target", DObject);
+                    } else if (Objects.equals(DObject, "Red Perimeter 2")&&opModeIsActive()) {
+                        //do bottom right corner actions (yellow machine)
+                        telemetry.addData("Visible Target", DObject);
+                        telemetry.update();
+                        sleep(1000);
+                        targetsSkyStone.deactivate();
+                        positionOfRobot = "BottomRight";
+                        break;
+
+                    } else {
+                        telemetry.addData("Visible Target", DObject);
+                        telemetry.update();
+                        positionOfRobot = "Unknown";
+                        break;
+                    }
+                } else {
+                    telemetry.addData("Visible Target", "none");
+                    telemetry.update();
+                    positionOfRobot = "Unknown";
+                }
                 telemetry.update();
             }
+            telemetry.update();
+
+            // Disable Tracking when we are done;
+            targetsSkyStone.deactivate();
         }
-        else {
-            telemetry.addData("Visible Target", "none");
+
+        while ((!(positionOfRobot.equals("Unknown")))&& opModeIsActive()) {
+            if (positionOfRobot.equals("UpperLeft")&&opModeIsActive()) {
+                moveBack(28);
+                moveRightStrafeMotor(12, 0.75);
+                deployClaws();
+                sleep(1500);
+                moveForward(40);
+                retractClaws();
+                sleep(1500);
+                //Park closest to the perimeter wall
+                moveLeftStrafeMotor(48, 0.75);
+                //or Park closest to the bridge
+                //moveLeftStrafeMotor(24,0.75);
+                //moveBack(28);
+                //moveLeftStrafeMotor(24,0.75);
+                break;
+            } else if (positionOfRobot.equals("BottomLeft")&&opModeIsActive()) {
+                moveRightStrafeMotor(8, 0.75);
+                moveBack(35.5);
+                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)&&opModeIsActive()) {
+                    skystone = true;
+                    locationOfSkystoneFromTop++;
+                } else {
+                    skystone = false;
+                    locationOfSkystoneFromTop++;
+                }
+                if (skystone&&opModeIsActive()) {
+                    rotate(180, 0.75);
+                    moveForward(6);
+                    rotate(90, 0.75);
+                    moveLeftStrafeMotor(18, 0.75); //17.5
+                    moveForward(30 + (8 * locationOfSkystoneFromTop));
+                    //Parks closest to the skybridge
+                    moveBack(10);
+                } else {
+                    moveLeftStrafeMotor(8, 0.75);
+                }
+
+            } else if (positionOfRobot.equals("UpperRight")&&opModeIsActive()) {
+                moveBack(28);
+                moveLeftStrafeMotor(12, 0.75);
+                deployClaws();
+                moveForward(40);
+                retractClaws();
+                moveRightStrafeMotor(48, 0.75);
+                //or Park closest to the bridge
+                //moveRightStrafeMotor(24,0.75);
+                //moveBack(28);
+                //moveRightStrafeMotor(24,0.75);
+            } else if (positionOfRobot.equals("BottomRight")&&opModeIsActive()) {
+                moveLeftStrafeMotor(8, 0.75);
+                moveBack(35.5);
+                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)&&opModeIsActive()) {
+                    skystone = true;
+                    locationOfSkystoneFromTop++;
+                } else {
+                    skystone = false;
+                    locationOfSkystoneFromTop++;
+                }
+                if (skystone&&opModeIsActive()) {
+                    rotate(-180, 0.75);
+                    moveForward(6);
+                    rotate(-90, 0.75);
+                    moveRightStrafeMotor(18, 0.75); //17.5
+                    moveForward(30 + (8 * locationOfSkystoneFromTop));
+                    //Parks closest to the skybridge
+                    moveBack(10);
+                } else {
+                    moveRightStrafeMotor(8, 0.75);
+                }
+
+
+            }
+
+        }
+
+    }
+
+    public void moveRightStrafeMotor(double targetInchesStrafe, double power) {
+        double strafeInches = targetInchesStrafe;
+        int newStrafeTarget = strafeMotor.getCurrentPosition() + (int) (strafeInches * COUNTS_PER_INCH);
+        strafeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        sleep(500);
+        strafeMotor.setPower(power);
+        while (opModeIsActive()) {
+            if (strafeMotor.getCurrentPosition() + 50 > newStrafeTarget &&opModeIsActive()) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                break;
+            }
+        }
+    }
+
+    public void moveLeftStrafeMotor(double targetInchesStrafe, double power) {
+        double strafeInches = targetInchesStrafe;
+        int newStrafeTarget = strafeMotor.getCurrentPosition() + (int) (strafeInches * COUNTS_PER_INCH);
+        strafeMotor.setPower(-power);
+        while (opModeIsActive()) {
+            if (strafeMotor.getCurrentPosition() + 50 > newStrafeTarget&&opModeIsActive()) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                break;
+            }
+        }
+    }
+
+    public void deployClaws() {
+        foundationServo1.setPosition(1);
+        foundationServo2.setPosition(0);
+    }
+
+    public void retractClaws() {
+        foundationServo1.setPosition(0);
+        foundationServo2.setPosition(1);
+    }
+
+    public void moveForward(double targetInches) {
+        //DEFINE MOVEMENT VALUES:
+        //MOVE TO FOUNDATION:
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        sleep(200);
+        int newLeftTarget = (int) ((targetInches * COUNTS_PER_INCH)*-1);
+        int newRightTarget = (int) (targetInches * COUNTS_PER_INCH);
+
+
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        while (opModeIsActive()) {
+            correction = checkDirection();
+            leftMotor.setPower((power - correction) * 1.5);
+            rightMotor.setPower((power + correction) * 1.5);
+            telemetry.addData("Movement", "Back");
+            telemetry.update();
+            if ((leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget)&&opModeIsActive()) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            }
+        }
+        while (((leftMotor.getCurrentPosition() > newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget)) &&opModeIsActive()) {
+            // Use gyro to drive in a straight line.
+            correction = pidDrive.performPID(getAngle());
+            leftMotor.setPower((power - correction) * 1.5);
+            rightMotor.setPower((power + correction) * 1.5);
+            telemetry.addData("Movement", "Forward");
             telemetry.update();
         }
-
-        //START MOVING
-        /*leftMotor.setDirection(DcMotor.Direction.FORWARD);
-        rightMotor.setDirection(DcMotor.Direction.REVERSE);
-        foundationMovement();
-
-        foundationServo1.setPosition(1);
-        foundationServo2.setPosition(1);
-
-        leftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        foundationMoveBack();
-         */
+        leftMotor.setPower(0);
+        rightMotor.setPower(0);
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     }
 
-    //method used to move the robot to the desired position
- /*   public void park() {
-        int leftInches = 36;
-        int rightInches = 36;
-        int newLeftTarget = leftMotor.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
-        int newRightTarget = rightMotor.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+    public void moveBack(double targetInches) {
+        pidDrive.reset();
+        pidDrive.setSetpoint(0);
+        pidDrive.setOutputRange(0, power);
+        pidDrive.setInputRange(-90, 90);
+        pidDrive.enable();
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        sleep(200);
+        int newLeftTarget = (int) (targetInches * COUNTS_PER_INCH);
+        int newRightTarget = (int) ((targetInches * COUNTS_PER_INCH )*-1);
 
-        while(opModeIsActive()) {
-        correction = checkDirection();
-
-        leftMotor.setTargetPosition(newLeftTarget);
-        rightMotor.setTargetPosition(newRightTarget);
-
-        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        telemetry.addData("1 imu heading", lastAngles.firstAngle);
-        telemetry.addData("2 global heading", globalAngle);
-        telemetry.addData("3 correction", correction);
-        telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
-        telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
-        telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
-        telemetry.update();
-
-        leftMotor.setPower(power - correction);
-        rightMotor.setPower(power + correction);
-        }
-    }
-    public void foundationMovement() {
-        //DEFINE MOVEMENT VALUES:
-        boolean isActive = true;
-
-        int leftInches = 40;
-        int rightInches = 40;
-        int newLeftTarget = leftMotor.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
-        int newRightTarget = rightMotor.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
-
-        //MOVE TO FOUNDATION:
-        leftMotor.setTargetPosition(newLeftTarget);
-        rightMotor.setTargetPosition(newRightTarget);
-
-        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        while(isActive) {
-            if(leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget) {
-                // Use gyro to drive in a straight line.
-                correction = checkDirection();
-
-                telemetry.addData("1 imu heading", lastAngles.firstAngle);
-                telemetry.addData("2 global heading", globalAngle);
-                telemetry.addData("3 correction", correction);
-                telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
-                telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
-                telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
-                telemetry.update();
-
-                leftMotor.setPower(power - correction);
-                rightMotor.setPower(power + correction);
-            } else {
-                isActive = false;
-            }
-        }
-
-
-    }
-    public void foundationMoveBack() {
-        boolean isActive = true;
-
-        leftMotor.setTargetPosition(0);
-        rightMotor.setTargetPosition(0);
-
-        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        while(isActive) {
-            if(leftMotor.getCurrentPosition() > 0 && rightMotor.getCurrentPosition() > 0){
-
-
-                // Use gyro to drive in a straight line.
-                correction = checkDirection();
-
-                telemetry.addData("1 imu heading", lastAngles.firstAngle);
-                telemetry.addData("2 global heading", globalAngle);
-                telemetry.addData("3 correction", correction);
-                telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
-                telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
-                telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
-                telemetry.update();
-
-                leftMotor.setPower((power - correction));
-                rightMotor.setPower((power - correction));
-            }
-            else {
-                isActive = false;
+        while (opModeIsActive()) {
+            correction = checkDirection();
+            leftMotor.setPower((power+correction)*-1.5);
+            leftMotor.setPower((power-correction)*-1.5);
+            if((leftMotor.getCurrentPosition() > newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget)&&opModeIsActive()) {
+                leftMotor.setPower(0);
+                rightMotor.setPower(0);
+                leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                telemetry.addData("DOne","DOne");
+                break;
             }
         }
     }
-    */
 
-    /**
-     * Resets the cumulative angle tracking to zero.
-     */
-    private void resetAngle()
-    {
+
+
+
+    private void resetAngle() {
         lastAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         globalAngle = 0;
@@ -391,10 +539,10 @@ public class AutonomousVuforia extends LinearOpMode
 
     /**
      * Get current cumulative angle rotation from last reset.
+     *
      * @return Angle in degrees. + = left, - = right.
      */
-    private double getAngle()
-    {
+    private double getAngle() {
         // We experimentally determined the Z axis is the axis we want to use for heading angle.
         // We have to process the angle because the imu works in euler angles so the Z axis is
         // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
@@ -418,10 +566,10 @@ public class AutonomousVuforia extends LinearOpMode
 
     /**
      * See if we are moving in a straight line and if not return a power correction value.
+     *
      * @return Power adjustment, + is adjust left - is adjust right.
      */
-    private double checkDirection()
-    {
+    private double checkDirection() {
         // The gain value determines how sensitive the correction is to direction changes.
         // You will have to experiment with your robot to get small smooth direction changes
         // to stay on a straight line.
@@ -439,13 +587,16 @@ public class AutonomousVuforia extends LinearOpMode
         return correction;
     }
 
-    /**
-     * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
-     * @param degrees Degrees to turn, + is left - is right
-     */
-    private void rotate(int degrees, double power)
-    {
-        double  leftPower, rightPower;
+    //If degrees positive, it will turn left
+    //If degrees negative, it will turn right
+    //Cannot turn more than 180 degrees
+    private void rotate(int degrees, double power) {
+        pidRotate.reset();
+        pidRotate.setSetpoint(degrees);
+        pidRotate.setInputRange(0, degrees);
+        pidRotate.setOutputRange(0, power);
+        pidRotate.setTolerance(1);
+        pidRotate.enable();
 
         // restart imu movement tracking.
         resetAngle();
@@ -454,39 +605,44 @@ public class AutonomousVuforia extends LinearOpMode
         // clockwise (right).
 
         if (degrees < 0)
-        {   // turn right.
-            leftPower = power;
-            rightPower = -power;
-        }
-        else if (degrees > 0)
-        {   // turn left.
-            leftPower = -power;
-            rightPower = power;
-        }
-        else return;
-
-        // set power to rotate.
-        leftMotor.setPower(leftPower);
-        rightMotor.setPower(rightPower);
-
-        // rotate until turn is completed.
-        if (degrees < 0) {
+        {
             // On right turn we have to get off zero first.
-            while (opModeIsActive() && getAngle() == 0) {}
+            while (opModeIsActive() && getAngle() == 0)
+            {
+                leftMotor.setPower(power);
+                rightMotor.setPower(-power);
+                sleep(100);
+            }
 
-            while (opModeIsActive() && getAngle() > degrees) {}
+            do
+            {
+                power = pidRotate.performPID(getAngle()); // power will be - on right turn.
+                leftMotor.setPower(-power);
+                rightMotor.setPower(power);
+            } while (opModeIsActive() && !pidRotate.onTarget());
         }
         else    // left turn.
-            while (opModeIsActive() && getAngle() < degrees) {}
+            do
+            {
+                power = pidRotate.performPID(getAngle()); // power will be + on left turn.
+                leftMotor.setPower(-power);
+                rightMotor.setPower(power);
+            } while (opModeIsActive() && !pidRotate.onTarget());
 
         // turn the motors off.
         rightMotor.setPower(0);
         leftMotor.setPower(0);
 
+        rotation = getAngle();
+
         // wait for rotation to stop.
-        sleep(1000);
+        sleep(500);
 
         // reset angle tracking on new heading.
         resetAngle();
+
     }
+
+
 }
+
