@@ -516,7 +516,7 @@ public class AutonomousVuforia extends LinearOpMode {
         while (opModeIsActive()) {
             correction = checkDirection();
             leftMotor.setPower((power+correction)*-1.5);
-            leftMotor.setPower((power-correction)*-1.5);
+            rightMotor.setPower((power-correction)*-1.5);
             if((leftMotor.getCurrentPosition() > newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget)&&opModeIsActive()) {
                 leftMotor.setPower(0);
                 rightMotor.setPower(0);
