@@ -95,7 +95,7 @@ public class AutonomousVuforia extends LinearOpMode {
     private static final float mmPerInch = 25.4f;
     private static final float mmTargetHeight = (6) * mmPerInch;          // the height of the center of the target image above the floor
     Orientation lastAngles = new Orientation();
-    double globalAngle, power = .80, correction, rotation;
+    double globalAngle, power = .3, correction = 0, rotation;
 
 
     // Initialization parameters for 15343
@@ -106,6 +106,7 @@ public class AutonomousVuforia extends LinearOpMode {
     static final double DRIVE_GEAR_REDUCTION = .6;     // This is < 1.0 if geared UP
     static final double WHEEL_DIAMETER_INCHES = 3.54331;     // For figuring circumference
     static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * Math.PI);
+    static final double COUNTS_PER_INCH_STRAFE = (COUNTS_PER_MOTOR_REV * .66) / (WHEEL_DIAMETER_INCHES * Math.PI);
     static final double DRIVE_SPEED = 0.6;
     static final double TURN_SPEED = 0.5;
 
@@ -134,7 +135,7 @@ public class AutonomousVuforia extends LinearOpMode {
     private String DObject = null;
     private int locationOfSkystoneFromTop;
     PIDController pidRotate = new PIDController(.003, .00003, 0);
-    PIDController pidDrive = new PIDController(2.05, 0.1, 0.2);
+    PIDController pidDrive = new PIDController(.05, 0.0005, 0.2);
 
 
     @Override
@@ -270,13 +271,16 @@ public class AutonomousVuforia extends LinearOpMode {
         // Note: To use the remote camera preview:
         // AFTER you hit Init on the Driver Station, use the "options menu" to select "Camera Stream"
         // Tap the preview window to receive a fresh image.
-        while (opModeIsActive()) {
+        telemetry.addData("test", "test");
+        telemetry.update();
+        moveBack(12);
+        if(opModeIsActive()) {
             targetsSkyStone.activate();
-            while (opModeIsActive()) {
+            while (targetVisible == false) {
                 // check all the trackable targets to see which one (if any) is visible.
                 targetVisible = false;
                 for (VuforiaTrackable trackable : allTrackables) {
-                    if ((((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible())&&opModeIsActive()) {
+                    if (((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible()) {
                         telemetry.addData("Visible Target", trackable.getName());
                         targetVisible = true;
                         DObject = trackable.getName();
@@ -289,47 +293,41 @@ public class AutonomousVuforia extends LinearOpMode {
                         break;
                     }
                 }
-                moveBack(12);
-                if (targetVisible &&opModeIsActive()) {
-                    if (Objects.equals(DObject, "Blue Perimeter 2")&&opModeIsActive()) {
+                if (targetVisible && opModeIsActive()) {
+                    if (Objects.equals(DObject, "Blue Perimeter 2")) {
                         //do upper left corner actions (L3-37)
                         telemetry.addData("Visible Target", DObject);
                         telemetry.update();
                         sleep(1000);
                         targetsSkyStone.deactivate();
                         positionOfRobot = "UpperLeft";
-                        break;
-                    } else if (Objects.equals(DObject, "Blue Perimeter 1")&&opModeIsActive()) {
+                    } else if (Objects.equals(DObject, "Blue Perimeter 1")) {
                         //do bottom left corner actions (BB8)
                         telemetry.addData("Visible Target", DObject);
                         telemetry.update();
                         sleep(1000);
                         targetsSkyStone.deactivate();
                         positionOfRobot = "BottomLeft";
-                        break;
-                    } else if (Objects.equals(DObject, "Red Perimeter 1")&&opModeIsActive()) {
+                    } else if (Objects.equals(DObject, "Red Perimeter 1")) {
                         //do upper right corner actions (c3po)
                         telemetry.addData("Visible Target", DObject);
                         telemetry.update();
                         sleep(1000);
                         targetsSkyStone.deactivate();
                         positionOfRobot = "UpperRight";
-                        break;
 
-                    } else if (Objects.equals(DObject, "Red Perimeter 2")&&opModeIsActive()) {
+                    } else if (Objects.equals(DObject, "Red Perimeter 2")) {
                         //do bottom right corner actions (yellow machine)
                         telemetry.addData("Visible Target", DObject);
                         telemetry.update();
                         sleep(1000);
                         targetsSkyStone.deactivate();
                         positionOfRobot = "BottomRight";
-                        break;
 
                     } else {
                         telemetry.addData("Visible Target", DObject);
                         telemetry.update();
                         positionOfRobot = "Unknown";
-                        break;
                     }
                 } else {
                     telemetry.addData("Visible Target", "none");
@@ -345,32 +343,33 @@ public class AutonomousVuforia extends LinearOpMode {
         }
 
         while ((!(positionOfRobot.equals("Unknown")))&& opModeIsActive()) {
-            if (positionOfRobot.equals("UpperLeft")&&opModeIsActive()) {
+            if (positionOfRobot.equals("UpperLeft")) {
                 moveBack(28);
-                moveRightStrafeMotor(12, 0.75);
+                moveRightStrafeMotor(12, 0.7);
+                sleep(1000);
                 deployClaws();
                 sleep(1500);
                 moveForward(40);
                 retractClaws();
                 sleep(1500);
                 //Park closest to the perimeter wall
-                moveLeftStrafeMotor(48, 0.75);
+                moveRightStrafeMotor(48, 0.75);
                 //or Park closest to the bridge
                 //moveLeftStrafeMotor(24,0.75);
                 //moveBack(28);
                 //moveLeftStrafeMotor(24,0.75);
                 break;
-            } else if (positionOfRobot.equals("BottomLeft")&&opModeIsActive()) {
+            } else if (positionOfRobot.equals("BottomLeft")) {
                 moveRightStrafeMotor(8, 0.75);
                 moveBack(35.5);
-                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)&&opModeIsActive()) {
+                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
                     skystone = true;
                     locationOfSkystoneFromTop++;
                 } else {
                     skystone = false;
                     locationOfSkystoneFromTop++;
                 }
-                if (skystone&&opModeIsActive()) {
+                if (skystone) {
                     rotate(180, 0.75);
                     moveForward(6);
                     rotate(90, 0.75);
@@ -382,7 +381,7 @@ public class AutonomousVuforia extends LinearOpMode {
                     moveLeftStrafeMotor(8, 0.75);
                 }
 
-            } else if (positionOfRobot.equals("UpperRight")&&opModeIsActive()) {
+            } else if (positionOfRobot.equals("UpperRight")) {
                 moveBack(28);
                 moveLeftStrafeMotor(12, 0.75);
                 deployClaws();
@@ -393,17 +392,17 @@ public class AutonomousVuforia extends LinearOpMode {
                 //moveRightStrafeMotor(24,0.75);
                 //moveBack(28);
                 //moveRightStrafeMotor(24,0.75);
-            } else if (positionOfRobot.equals("BottomRight")&&opModeIsActive()) {
+            } else if (positionOfRobot.equals("BottomRight")) {
                 moveLeftStrafeMotor(8, 0.75);
                 moveBack(35.5);
-                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)&&opModeIsActive()) {
+                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
                     skystone = true;
                     locationOfSkystoneFromTop++;
                 } else {
                     skystone = false;
                     locationOfSkystoneFromTop++;
                 }
-                if (skystone&&opModeIsActive()) {
+                if (skystone) {
                     rotate(-180, 0.75);
                     moveForward(6);
                     rotate(-90, 0.75);
@@ -422,33 +421,38 @@ public class AutonomousVuforia extends LinearOpMode {
 
     }
 
-    public void moveRightStrafeMotor(double targetInchesStrafe, double power) {
+    public void moveLeftStrafeMotor(double targetInchesStrafe, double power) {
         double strafeInches = targetInchesStrafe;
         int newStrafeTarget = strafeMotor.getCurrentPosition() + (int) (strafeInches * COUNTS_PER_INCH);
         strafeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         sleep(500);
+        strafeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         strafeMotor.setPower(power);
         while (opModeIsActive()) {
-            if (strafeMotor.getCurrentPosition() + 50 > newStrafeTarget &&opModeIsActive()) {
-                leftMotor.setPower(0);
-                rightMotor.setPower(0);
+            if (strafeMotor.getCurrentPosition() + 50 > newStrafeTarget) {
+                strafeMotor.setPower(0);
                 break;
             }
         }
+        idle();
     }
 
-    public void moveLeftStrafeMotor(double targetInchesStrafe, double power) {
+    public void moveRightStrafeMotor(double targetInchesStrafe, double power) {
         double strafeInches = targetInchesStrafe;
-        int newStrafeTarget = strafeMotor.getCurrentPosition() + (int) (strafeInches * COUNTS_PER_INCH);
-        strafeMotor.setPower(-power);
-        while (opModeIsActive()) {
-            if (strafeMotor.getCurrentPosition() + 50 > newStrafeTarget&&opModeIsActive()) {
-                leftMotor.setPower(0);
-                rightMotor.setPower(0);
-                break;
-            }
+        int newStrafeTarget = (int) ((strafeInches * COUNTS_PER_INCH_STRAFE) * -1);
+        strafeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        sleep(500);
+        strafeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        while (opModeIsActive() && strafeMotor.getCurrentPosition() > newStrafeTarget) {
+            strafeMotor.setPower(-power);
+            telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
+            telemetry.update();
         }
+        strafeMotor.setPower(0);
+        sleep(200);
+        idle();
     }
+
 
     public void deployClaws() {
         foundationServo1.setPosition(1);
@@ -461,44 +465,44 @@ public class AutonomousVuforia extends LinearOpMode {
     }
 
     public void moveForward(double targetInches) {
+        //Update 12/29/19: Added PID Drive
+        pidDrive.reset();
+        pidDrive.setSetpoint(0);
+        pidDrive.setOutputRange(0, power);
+        pidDrive.setInputRange(-90, 90);
+        pidDrive.enable();
+
         //DEFINE MOVEMENT VALUES:
         //MOVE TO FOUNDATION:
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        sleep(200);
-        int newLeftTarget = (int) ((targetInches * COUNTS_PER_INCH)*-1);
+        sleep(300);
+        int newLeftTarget = (int) (targetInches * COUNTS_PER_INCH);
         int newRightTarget = (int) (targetInches * COUNTS_PER_INCH);
 
 
         leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        while (opModeIsActive()) {
-            correction = checkDirection();
-            leftMotor.setPower((power - correction) * 1.5);
-            rightMotor.setPower((power + correction) * 1.5);
-            telemetry.addData("Movement", "Back");
-            telemetry.update();
-            if ((leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget)&&opModeIsActive()) {
-                leftMotor.setPower(0);
-                rightMotor.setPower(0);
-                leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            }
-        }
-        while (((leftMotor.getCurrentPosition() > newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget)) &&opModeIsActive()) {
+        while (leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget && opModeIsActive()) {
             // Use gyro to drive in a straight line.
-            correction = pidDrive.performPID(getAngle());
+
             leftMotor.setPower((power - correction) * 1.5);
             rightMotor.setPower((power + correction) * 1.5);
-            telemetry.addData("Movement", "Forward");
+            correction = pidDrive.performPID(getAngle());
+            telemetry.addData("Left Motor", leftMotor.getCurrentPosition());
+            telemetry.addData("Right Motor", rightMotor.getCurrentPosition());
             telemetry.update();
         }
-        leftMotor.setPower(0);
-        rightMotor.setPower(0);
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        correction = 0;
+        pidDrive.reset();
+        leftMotor.setPower(0);
+        rightMotor.setPower(0);
+        sleep(200);
+        idle();
+
     }
 
     public void moveBack(double targetInches) {
@@ -513,20 +517,29 @@ public class AutonomousVuforia extends LinearOpMode {
         int newLeftTarget = (int) (targetInches * COUNTS_PER_INCH);
         int newRightTarget = (int) ((targetInches * COUNTS_PER_INCH )*-1);
 
-        while (opModeIsActive()) {
-            correction = checkDirection();
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        while (leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget && opModeIsActive()) {
+            telemetry.addData("hellotest", "hello Test");
+            telemetry.update();
             leftMotor.setPower((power+correction)*-1.5);
             rightMotor.setPower((power-correction)*-1.5);
-            if((leftMotor.getCurrentPosition() > newLeftTarget && rightMotor.getCurrentPosition() < newRightTarget)&&opModeIsActive()) {
-                leftMotor.setPower(0);
-                rightMotor.setPower(0);
-                leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                telemetry.addData("DOne","DOne");
-                break;
-            }
+            correction = pidDrive.performPID(getAngle());
+            telemetry.addData("Correction", correction);
+            telemetry.addData("Movement", "Forward");
+            telemetry.update();
         }
-    }
+        leftMotor.setPower(0);
+        rightMotor.setPower(0);
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        correction = 0;
+        pidDrive.reset();
+        sleep(200);
+        idle();
+        }
+
 
 
 
