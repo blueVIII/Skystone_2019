@@ -92,7 +92,7 @@ public class AutonomousVuforia extends LinearOpMode {
 
     // Since ImageTarget trackables use mm to specifiy their dimensions, we must use mm for all the physical dimension.
     // We will define some constants and conversions here
-    private static final float mmPerInch = 25.4f;
+    private static final float mmPerInch = 13.4f;
     private static final float mmTargetHeight = (6) * mmPerInch;          // the height of the center of the target image above the floor
     Orientation lastAngles = new Orientation();
     double globalAngle, power = .3, correction = 0, rotation;
@@ -344,16 +344,16 @@ public class AutonomousVuforia extends LinearOpMode {
 
         while ((!(positionOfRobot.equals("Unknown")))&& opModeIsActive()) {
             if (positionOfRobot.equals("UpperLeft")) {
-                moveBack(28);
+                moveBack(21);
                 moveRightStrafeMotor(12, 0.7);
                 sleep(1000);
                 deployClaws();
                 sleep(1500);
-                moveForward(40);
+                moveForward(33);
                 retractClaws();
                 sleep(1500);
                 //Park closest to the perimeter wall
-                moveRightStrafeMotor(48, 0.75);
+                moveRightStrafeMotor(36, 0.75);
                 //or Park closest to the bridge
                 //moveLeftStrafeMotor(24,0.75);
                 //moveBack(28);
@@ -361,7 +361,7 @@ public class AutonomousVuforia extends LinearOpMode {
                 break;
             } else if (positionOfRobot.equals("BottomLeft")) {
                 moveRightStrafeMotor(8, 0.75);
-                moveBack(35.5);
+                moveBack(13);
                 if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
                     skystone = true;
                     locationOfSkystoneFromTop++;
@@ -387,14 +387,14 @@ public class AutonomousVuforia extends LinearOpMode {
                 deployClaws();
                 moveForward(40);
                 retractClaws();
-                moveRightStrafeMotor(48, 0.75);
+                moveRightStrafeMotor(36, 0.75);
                 //or Park closest to the bridge
                 //moveRightStrafeMotor(24,0.75);
                 //moveBack(28);
                 //moveRightStrafeMotor(24,0.75);
             } else if (positionOfRobot.equals("BottomRight")) {
                 moveLeftStrafeMotor(8, 0.75);
-                moveBack(35.5);
+                moveBack(13);
                 if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
                     skystone = true;
                     locationOfSkystoneFromTop++;
