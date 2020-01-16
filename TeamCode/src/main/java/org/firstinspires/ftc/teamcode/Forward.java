@@ -52,6 +52,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 @TeleOp(name="Slide Drive", group="Linear Opmode")
 //@Disabled
 public class Forward extends OpMode {
+    HardwareRobot robot = new HardwareRobot();
     //private DcMotor leftDrive = null;
     //private DcMotor rightDrive = null;
 
@@ -70,13 +71,12 @@ public class Forward extends OpMode {
     private double rightPower;
     private double strafePower;
     private double liftPower;
-    boolean clawIsOpen = true;
-    boolean foundationServoOpen = true;
 
 
     // Declare OpMode members.
     @Override
     public void init() {
+
         telemetry.addData("Status", "Initialized");
         telemetry.update();
         leftMotor = hardwareMap.dcMotor.get("Left_Motor");
@@ -142,11 +142,15 @@ public class Forward extends OpMode {
         if(gamepad1.left_bumper) {
             leftPower  = (gamepad1.left_stick_y) / 1.75;
             rightPower = (gamepad1.right_stick_y) / 1.75;
-        } else {
+            strafePower = (((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2)/1.75;
+        }
+        else {
             leftPower  = (gamepad1.left_stick_y);
             rightPower = (gamepad1.right_stick_y);
+            strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
         }
-        strafePower = ((gamepad1.left_stick_x) + (gamepad1.right_stick_x)) / 2;
+
+        liftPower = (gamepad2.left_stick_y) / -1.5;
         liftPower = (gamepad2.left_stick_y) / -1.5;
 
         // Send calculated power to wheels
