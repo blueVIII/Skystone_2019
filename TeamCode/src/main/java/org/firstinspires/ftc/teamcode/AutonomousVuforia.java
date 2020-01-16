@@ -61,7 +61,7 @@ import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
 
 
-@Autonomous(name="SKYSTONE Vuforia Nav Webcam", group ="Linear Opmode")
+@Autonomous(name = "SKYSTONE Vuforia Nav Webcam", group = "Linear Opmode")
 //@Disabled
 public class AutonomousVuforia extends LinearOpMode {
 
@@ -274,7 +274,7 @@ public class AutonomousVuforia extends LinearOpMode {
         telemetry.addData("test", "test");
         telemetry.update();
         moveBack(12);
-        if(opModeIsActive()) {
+        if (opModeIsActive()) {
             targetsSkyStone.activate();
             while (targetVisible == false) {
                 // check all the trackable targets to see which one (if any) is visible.
@@ -342,7 +342,7 @@ public class AutonomousVuforia extends LinearOpMode {
             targetsSkyStone.deactivate();
         }
 
-        while ((!(positionOfRobot.equals("Unknown")))&& opModeIsActive()) {
+        while ((!(positionOfRobot.equals("Unknown"))) && opModeIsActive()) {
             if (positionOfRobot.equals("UpperLeft")) {
                 moveBack(21);
                 moveRightStrafeMotor(15, 0.7);
@@ -362,7 +362,7 @@ public class AutonomousVuforia extends LinearOpMode {
             } else if (positionOfRobot.equals("BottomLeft")) {
                 moveRightStrafeMotor(16, 0.75);
                 moveBack(14);
-                while(locationOfSkystoneFromTop < 4) {
+                while (locationOfSkystoneFromTop < 4) {
                     if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
                         skystone = true;
                         locationOfSkystoneFromTop++;
@@ -449,7 +449,7 @@ public class AutonomousVuforia extends LinearOpMode {
         strafeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         strafeMotor.setPower(-power);
         while (opModeIsActive()) {
-            if (strafeMotor.getCurrentPosition() + 50 < newStrafeTarget){
+            if (strafeMotor.getCurrentPosition() + 50 < newStrafeTarget) {
                 strafeMotor.setPower(0);
                 break;
             }
@@ -519,7 +519,7 @@ public class AutonomousVuforia extends LinearOpMode {
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         sleep(200);
         int newLeftTarget = (int) (targetInches * COUNTS_PER_INCH);
-        int newRightTarget = (int) ((targetInches * COUNTS_PER_INCH )*-1);
+        int newRightTarget = (int) ((targetInches * COUNTS_PER_INCH) * -1);
 
         leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -527,8 +527,8 @@ public class AutonomousVuforia extends LinearOpMode {
         while (leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget && opModeIsActive()) {
             telemetry.addData("hellotest", "hello Test");
             telemetry.update();
-            leftMotor.setPower((power+correction)*-1.5);
-            rightMotor.setPower((power-correction)*-1.5);
+            leftMotor.setPower((power + correction) * -1.5);
+            rightMotor.setPower((power - correction) * -1.5);
             correction = pidDrive.performPID(getAngle());
             telemetry.addData("Correction", correction);
             telemetry.addData("Movement", "Forward");
@@ -542,10 +542,7 @@ public class AutonomousVuforia extends LinearOpMode {
         pidDrive.reset();
         sleep(200);
         idle();
-        }
-
-
-
+    }
 
 
     private void resetAngle() {
@@ -635,26 +632,21 @@ public class AutonomousVuforia extends LinearOpMode {
 
         // rotate until turn is completed.
 
-        if (degrees < 0)
-        {
+        if (degrees < 0) {
             // On right turn we have to get off zero first.
-            while (opModeIsActive() && getAngle() == 0)
-            {
+            while (opModeIsActive() && getAngle() == 0) {
                 leftMotor.setPower(power);
                 rightMotor.setPower(-power);
                 sleep(100);
             }
 
-            do
-            {
+            do {
                 power = pidRotate.performPID(getAngle()); // power will be - on right turn.
                 leftMotor.setPower(-power);
                 rightMotor.setPower(power);
             } while (opModeIsActive() && !pidRotate.onTarget());
-        }
-        else    // left turn.
-            do
-            {
+        } else    // left turn.
+            do {
                 power = pidRotate.performPID(getAngle()); // power will be + on left turn.
                 leftMotor.setPower(-power);
                 rightMotor.setPower(power);
