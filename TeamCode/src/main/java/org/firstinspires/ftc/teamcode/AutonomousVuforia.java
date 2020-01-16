@@ -274,7 +274,6 @@ public class AutonomousVuforia extends LinearOpMode {
         telemetry.addData("test", "test");
         telemetry.update();
         moveBack(12);
-        rotate(180, .75);
         if(opModeIsActive()) {
             targetsSkyStone.activate();
             while (targetVisible == false) {
@@ -363,25 +362,28 @@ public class AutonomousVuforia extends LinearOpMode {
             } else if (positionOfRobot.equals("BottomLeft")) {
                 moveRightStrafeMotor(16, 0.75);
                 moveBack(14);
-                if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
-                    skystone = true;
-                    locationOfSkystoneFromTop++;
-                    telemetry.addData("Skystone", "Yes");
-                    telemetry.update();
-                    rotate(180, 0.75);
-                    telemetry.addData("rotating", "rotating");
-                    moveForward(6);
-                    rotate(90, 0.75);
-                    moveLeftStrafeMotor(18, 0.75); //17.5
-                    moveForward(30 + (8 * locationOfSkystoneFromTop));
-                    //Parks closest to the skybridge
-                    moveBack(10);
-                } else {
-                    skystone = false;
-                    locationOfSkystoneFromTop++;
-                    telemetry.addData("Skystone", "Nope");
-                    telemetry.update();
-                    moveLeftStrafeMotor(8, 0.75);
+                while(locationOfSkystoneFromTop < 4) {
+                    if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
+                        skystone = true;
+                        locationOfSkystoneFromTop++;
+                        telemetry.addData("Skystone", "Yes");
+                        telemetry.update();
+                        rotate(175, 0.4);
+                        telemetry.addData("rotating", "rotating");
+                        moveForward(6);
+                        rotate(85, 0.4);
+                        moveLeftStrafeMotor(18, 0.75); //17.5
+                        moveForward(30 + (8 * locationOfSkystoneFromTop));
+                        //Parks closest to the skybridge
+                        moveBack(10);
+                    } else {
+                        moveLeftStrafeMotor(8, 0.75);
+                        locationOfSkystoneFromTop++;
+                        telemetry.addData("Skystone", "Nope");
+                        telemetry.update();
+                        telemetry.addData("moving left", "moving left");
+                        telemetry.update();
+                    }
                 }
             } else if (positionOfRobot.equals("UpperRight")) {
                 moveBack(28);
@@ -445,13 +447,13 @@ public class AutonomousVuforia extends LinearOpMode {
         strafeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         sleep(500);
         strafeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        while (opModeIsActive() && strafeMotor.getCurrentPosition() > newStrafeTarget) {
-            strafeMotor.setPower(-power);
-            telemetry.addData("Strafe Motor", strafeMotor.getCurrentPosition());
-            telemetry.update();
+        strafeMotor.setPower(-power);
+        while (opModeIsActive()) {
+            if (strafeMotor.getCurrentPosition() + 50 < newStrafeTarget){
+                strafeMotor.setPower(0);
+                break;
+            }
         }
-        strafeMotor.setPower(0);
-        sleep(200);
         idle();
     }
 
@@ -606,6 +608,21 @@ public class AutonomousVuforia extends LinearOpMode {
     //If degrees negative, it will turn right
     //Cannot turn more than 180 degrees
     private void rotate(int degrees, double power) {
+// restart imu angle tracking.
+        resetAngle();
+
+        // if degrees > 359 we cap at 359 with same sign as original degrees.
+        if (Math.abs(degrees) > 359) degrees = (int) Math.copySign(359, degrees);
+
+        // start pid controller. PID controller will monitor the turn angle with respect to the
+        // target angle and reduce power as we approach the target angle. This is to prevent the
+        // robots momentum from overshooting the turn after we turn off the power. The PID controller
+        // reports onTarget() = true when the difference between turn angle and target angle is within
+        // 1% of target (tolerance) which is about 1 degree. This helps prevent overshoot. Overshoot is
+        // dependant on the motor and gearing configuration, starting power, weight of the robot and the
+        // on target tolerance. If the controller overshoots, it will reverse the sign of the output
+        // turning the robot back toward the setpoint value.
+
         pidRotate.reset();
         pidRotate.setSetpoint(degrees);
         pidRotate.setInputRange(0, degrees);
@@ -613,11 +630,10 @@ public class AutonomousVuforia extends LinearOpMode {
         pidRotate.setTolerance(1);
         pidRotate.enable();
 
-        // restart imu movement tracking.
-        resetAngle();
-
         // getAngle() returns + when rotating counter clockwise (left) and - when rotating
         // clockwise (right).
+
+        // rotate until turn is completed.
 
         if (degrees < 0)
         {
