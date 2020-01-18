@@ -139,8 +139,6 @@ public class AutonomousVuforia extends LinearOpMode {
         //reverse the motors so the robot drives straight
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
         rightMotor.setDirection(DcMotor.Direction.FORWARD);
-        boolean skystone; //True if has skystone, false if not
-
 
         BNO055IMU.Parameters parametersIMU = new BNO055IMU.Parameters();
 
@@ -567,7 +565,7 @@ public class AutonomousVuforia extends LinearOpMode {
         // 1% of target (tolerance) which is about 1 degree. This helps prevent overshoot. Overshoot is
         // dependant on the motor and gearing configuration, starting power, weight of the robot and the
         // on target tolerance. If the controller overshoots, it will reverse the sign of the output
-        // turning the robot back toward the setpoint value.
+        // turning the robot back toward the value.
 
         pidRotate.reset();
         pidRotate.setSetpoint(degrees);
@@ -610,8 +608,6 @@ public class AutonomousVuforia extends LinearOpMode {
         // turn the motors off.
         rightMotor.setPower(0);
         leftMotor.setPower(0);
-
-        double rotation = getAngle();
 
         // wait for rotation to stop.
         sleep(500);
