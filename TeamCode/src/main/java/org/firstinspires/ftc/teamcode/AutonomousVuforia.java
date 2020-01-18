@@ -249,7 +249,7 @@ public class AutonomousVuforia extends LinearOpMode {
         telemetry.addData("Moving", "moving");
         telemetry.update();
         retractClaws();
-        moveBack(12);
+        moveBack(14);
         if (opModeIsActive()) {
             targetsSkyStone.activate();
             while (!targetVisible) {
@@ -317,7 +317,7 @@ public class AutonomousVuforia extends LinearOpMode {
         while ((!(positionOfRobot.equals("Unknown"))) && opModeIsActive()) {
             switch (positionOfRobot) {
                 case "UpperLeft":
-                    moveBack(17);
+                    moveBack(15);
                     moveRightStrafeMotor(15, 0.7);
                     sleep(500);
                     deployClaws();
@@ -333,69 +333,71 @@ public class AutonomousVuforia extends LinearOpMode {
                     //moveLeftStrafeMotor(24,0.75);
                     break label;
                 case "BottomLeft":
-                    moveRightStrafeMotor(16, 0.75);
-                    moveBack(14);
-                    while (locationOfSkystoneFromTop < 4) {
-                        if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
+                    moveRightStrafeMotor(13, 0.75);
+                    moveBack(12);
+                    while (opModeIsActive()) {
+                        if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) { //True for skystone
                             locationOfSkystoneFromTop++;
                             telemetry.addData("Skystone", "Yes");
                             telemetry.update();
-                            resetAngle();
+                            moveForward(8);
                             rotate(175, 0.4);
-                            telemetry.addData("rotating", "rotating");
-                            moveForward(6);
+                            //moveLeftStrafeMotor(5,0.7);
+                            telemetry.update();
+                            moveForward(20);
                             rotate(85, 0.4);
-                            moveLeftStrafeMotor(18, 0.75); //17.5
-                            moveForward(30 + (8 * locationOfSkystoneFromTop));
-                            //Parks closest to the skybridge
-                            moveBack(10);
+                            moveLeftStrafeMotor(28, 0.75); //17.5
+                            moveForward(24 + (8 * locationOfSkystoneFromTop));
+                            moveBack(14);
+                            break;
                         } else {
-                            moveLeftStrafeMotor(8, 0.75);
+                            moveLeftStrafeMotor(9.4, 0.75);
                             locationOfSkystoneFromTop++;
                             telemetry.addData("Skystone", "Nope");
-                            telemetry.update();
-                            telemetry.addData("moving left", "moving left");
                             telemetry.update();
                         }
                     }
                     break label;
                 case "UpperRight":
-                    moveBack(16);
+                    moveBack(15);
                     moveLeftStrafeMotor(15, 0.7);
-                    telemetry.addData("Moving Left", "Moving Left");
+                    sleep(500);
                     deployClaws();
-                    moveForward(40);
+                    sleep(500);
+                    moveForward(34);
                     retractClaws();
-                    moveRightStrafeMotor(48, 0.75);
+                    sleep(500);
+                    moveRightStrafeMotor(51, 0.75);
                     //or Park closest to the bridge
                     //moveRightStrafeMotor(24,0.75);
                     //moveBack(28);
                     //moveRightStrafeMotor(24,0.75);
                     break label;
                 case "BottomRight":
-                    moveLeftStrafeMotor(8, 0.75);
-                    moveBack(13);
-                    if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) {
-                        skystone = true;
-                        locationOfSkystoneFromTop++;
-                    } else {
-                        skystone = false;
-                        locationOfSkystoneFromTop++;
+                    moveLeftStrafeMotor(12, 0.75);
+                    moveBack(12);
+                    while (opModeIsActive()) {
+                        if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) { //True for skystone
+                            locationOfSkystoneFromTop++;
+                            telemetry.addData("Skystone", "Yes");
+                            telemetry.update();
+                            moveForward(8);
+                            rotate(-175, 0.4);
+                            //moveLeftStrafeMotor(5,0.7);
+                            telemetry.update();
+                            moveForward(20);
+                            rotate(-85, 0.4);
+                            moveRightStrafeMotor(28, 0.75); //17.5
+                            moveForward(24 + (8 * locationOfSkystoneFromTop));
+                            moveBack(14);
+                            break;
+                        } else {
+                            moveRightStrafeMotor(9.4, 0.75);
+                            locationOfSkystoneFromTop++;
+                            telemetry.addData("Skystone", "Nope");
+                            telemetry.update();
+                        }
                     }
-                    if (skystone) {
-                        rotate(-180, 0.75);
-                        moveForward(6);
-                        rotate(-90, 0.75);
-                        moveRightStrafeMotor(18, 0.75); //17.5
-
-                        moveForward(30 + (8 * locationOfSkystoneFromTop));
-                        //Parks closest to the skybridge
-                        moveBack(10);
-                    } else {
-                        moveRightStrafeMotor(8, 0.75);
-                    }
-
-
                     break label;
             }
 
@@ -501,7 +503,6 @@ public class AutonomousVuforia extends LinearOpMode {
         rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         while (leftMotor.getCurrentPosition() < newLeftTarget && rightMotor.getCurrentPosition() > newRightTarget && opModeIsActive()) {
-            telemetry.addData("hellotest", "hello Test");
             telemetry.update();
             leftMotor.setPower((power + correction) * -1.5);
             rightMotor.setPower((power - correction) * -1.5);
@@ -527,11 +528,6 @@ public class AutonomousVuforia extends LinearOpMode {
         globalAngle = 0;
     }
 
-    /**
-     * Get current cumulative angle rotation from last reset.
-     *
-     * @return Angle in degrees. + = left, - = right.
-     */
     private double getAngle() {
         // We experimentally determined the Z axis is the axis we want to use for heading angle.
         // We have to process the angle because the imu works in euler angles so the Z axis is
@@ -585,6 +581,10 @@ public class AutonomousVuforia extends LinearOpMode {
 
         // rotate until turn is completed.
         telemetry.addData("Moving", degrees);
+        telemetry.update();
+
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         if (degrees < 0) {
             // On right turn we have to get off zero first.

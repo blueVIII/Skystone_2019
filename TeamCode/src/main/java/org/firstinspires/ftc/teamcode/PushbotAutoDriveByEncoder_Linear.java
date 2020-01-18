@@ -66,6 +66,7 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
  */
 
 @Autonomous(name="Autonomous", group="Pushbot")
+@Disabled
 
 public class PushbotAutoDriveByEncoder_Linear extends LinearOpMode {
 
