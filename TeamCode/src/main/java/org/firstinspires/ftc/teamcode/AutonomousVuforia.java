@@ -392,7 +392,7 @@ public class AutonomousVuforia extends LinearOpMode {
                             moveBack(14);
                             break;
                         } else {
-                            moveRightStrafeMotor(9.4, 0.75);
+                            moveRightStrafeMotor(7, 0.75);
                             locationOfSkystoneFromTop++;
                             telemetry.addData("Skystone", "Nope");
                             telemetry.update();
