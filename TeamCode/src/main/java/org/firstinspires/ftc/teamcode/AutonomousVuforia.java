@@ -88,7 +88,7 @@ public class AutonomousVuforia extends LinearOpMode {
     private static final float mmPerInch = 13.4f;
     private Orientation lastAngles = new Orientation();
     private double globalAngle;
-    private double power = .3;
+    private double power = .4;
     private double correction = 0;
 
 
@@ -316,7 +316,7 @@ public class AutonomousVuforia extends LinearOpMode {
             switch (positionOfRobot) {
                 case "UpperLeft":
                     moveBack(15);
-                    moveRightStrafeMotor(15, 0.7);
+                    moveRightStrafeMotor(17, 0.7);
                     sleep(500);
                     deployClaws();
                     sleep(500);
@@ -324,14 +324,14 @@ public class AutonomousVuforia extends LinearOpMode {
                     retractClaws();
                     sleep(500);
                     //Park closest to the perimeter wall
-                    moveLeftStrafeMotor(51, 0.75);
+                    moveLeftStrafeMotor(54, 0.9);
                     //or Park closest to the bridge
                     //moveLeftStrafeMotor(24,0.75);
                     //moveBack(28);
                     //moveLeftStrafeMotor(24,0.75);
                     break label;
                 case "BottomLeft":
-                    moveRightStrafeMotor(13, 0.75);
+                    /*moveRightStrafeMotor(13, 0.75);
                     moveBack(12);
                     while (opModeIsActive()) {
                         if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) { //True for skystone
@@ -355,6 +355,9 @@ public class AutonomousVuforia extends LinearOpMode {
                             telemetry.update();
                         }
                     }
+
+                     */
+                    moveRightStrafeMotor(43,0.7);
                     break label;
                 case "UpperRight":
                     moveBack(15);
@@ -365,14 +368,14 @@ public class AutonomousVuforia extends LinearOpMode {
                     moveForward(34);
                     retractClaws();
                     sleep(500);
-                    moveRightStrafeMotor(51, 0.75);
+                    moveRightStrafeMotor(54, 0.9);
                     //or Park closest to the bridge
                     //moveRightStrafeMotor(24,0.75);
                     //moveBack(28);
                     //moveRightStrafeMotor(24,0.75);
                     break label;
                 case "BottomRight":
-                    moveLeftStrafeMotor(12, 0.75);
+                    /*moveLeftStrafeMotor(12, 0.75);
                     moveBack(12);
                     while (opModeIsActive()) {
                         if (((sensorColor.red() * sensorColor.green()) / (sensorColor.blue() * sensorColor.blue()) < 3)) { //True for skystone
@@ -396,6 +399,9 @@ public class AutonomousVuforia extends LinearOpMode {
                             telemetry.update();
                         }
                     }
+
+                     */
+                    moveLeftStrafeMotor(43,0.7);
                     break label;
             }
 
@@ -404,7 +410,7 @@ public class AutonomousVuforia extends LinearOpMode {
     }
 
     private void moveRightStrafeMotor(double targetInchesStrafe, double power) {
-        int newStrafeTarget = (int) (targetInchesStrafe * COUNTS_PER_INCH) - strafeMotor.getCurrentPosition();
+        int newStrafeTarget = (int) (targetInchesStrafe * COUNTS_PER_INCH);
         strafeMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         sleep(500);
         strafeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
